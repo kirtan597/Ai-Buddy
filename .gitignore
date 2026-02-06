@@ -42,3 +42,6 @@ next-env.d.ts
 !.env.example
 
 
+
+.vscode/
+J-A-R-V-I-S/
