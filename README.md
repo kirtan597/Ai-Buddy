@@ -1,124 +1,170 @@
 # Ai Buddy Chat
 
-![Next.js](https://img.shields.io/badge/Next.js-16.1.6-black?style=for-the-badge&logo=next.js&logoColor=white)
-![React](https://img.shields.io/badge/React-19.2.3-61DAFB?style=for-the-badge&logo=react&logoColor=black)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
-![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.0-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
-![OpenAI](https://img.shields.io/badge/OpenAI-API-412991?style=for-the-badge&logo=openai&logoColor=white)
+<div align="center">
 
-**Ai Buddy Chat** is a state-of-the-art, real-time AI conversational assistant built with the latest web technologies. It provides a seamless, responsive, and aesthetically pleasing chat interface powered by OpenAI's advanced models. Designed for developers and power users, it features markdown support, code syntax highlighting, and smooth interactions.
+![Ai Buddy Banner](https://capsule-render.vercel.app/api?type=waving&color=0:3a1c71,100:d76d77&height=200&section=header&text=Ai%20Buddy&fontSize=80&fontColor=fff&animation=fadeIn&fontAlignY=35&desc=Your%20Intelligent%20Pair%20Programmer&descAlignY=55&descAlign=50)
 
----
+<a href="https://nextjs.org">
+  <img src="https://img.shields.io/badge/Next.js-16.1.6-black?style=for-the-badge&logo=next.js&logoColor=white" alt="Next.js">
+</a>
+<a href="https://react.dev">
+  <img src="https://img.shields.io/badge/React-19.2.3-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React">
+</a>
+<a href="https://www.typescriptlang.org">
+  <img src="https://img.shields.io/badge/TypeScript-5.0-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript">
+</a>
+<a href="https://tailwindcss.com">
+  <img src="https://img.shields.io/badge/Tailwind_CSS-4.0-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" alt="Tailwind CSS">
+</a>
+<a href="https://openai.com">
+  <img src="https://img.shields.io/badge/OpenAI-API-412991?style=for-the-badge&logo=openai&logoColor=white" alt="OpenAI">
+</a>
 
-## 🚀 Key Features
-
-*   **Real-Time AI Interaction**: Powered by OpenAI's GPT models for intelligent and context-aware responses.
-*   **Modern UI/UX**: Built with **Radix UI** primitives and **Tailwind CSS v4** for a robust, accessible, and beautiful interface.
-*   **Rich Content Support**: Full support for **Markdown** rendering and **Syntax Highlighting** for code blocks, making it ideal for technical discussions.
-*   **Smooth Animations**: Integrated **Framer Motion** for fluid UI transitions and **Lenis** for premium smooth scrolling effects.
-*   **Responsive Design**: Fully responsive layout that works perfectly across desktop and mobile devices.
-*   **State Management**: efficient state management using **Zustand**.
-
----
-
-## 🛠️ Technology Stack
-
-*   **Framework**: [Next.js 16 (App Router)](https://nextjs.org/) - The React Framework for the Web.
-*   **Language**: [TypeScript](https://www.typescriptlang.org/) - Typed JavaScript for robust development.
-*   **Styling**:
-    *   [Tailwind CSS v4](https://tailwindcss.com/) - Utility-first CSS framework.
-    *   [Radix UI](https://www.radix-ui.com/) - Unstyled, accessible UI components.
-    *   [Lucide React](https://lucide.dev/) - Beautiful & consistent icons.
-*   **Animations**:
-    *   [Framer Motion](https://www.framer.com/motion/) - Production-ready animation library.
-    *   [Lenis](https://lenis.studiofreight.com/) - Smooth scrolling library.
-*   **State Management**: [Zustand](https://github.com/pmndrs/zustand) - Small, fast, and scalable bearbones state-management solution.
-*   **AI Integration**: [OpenAI Node.js SDK](https://github.com/openai/openai-node) - Official usage of the OpenAI API.
+</div>
 
 ---
 
-## 📂 Architecture Overview
+# 🔮 Overview
 
-The project follows a modern **Next.js App Router** structure, ensuring modularity and scalability.
+**Ai Buddy Chat** isn't just another chatbot—it's a **premium, architectural masterpiece** designed for developers who demand excellence. Built on the bleeding edge of web technology, it orchestrates a symphony of **Real-time AI**, **Fluid Animations**, and **Type-Safe Architecture**.
 
+Experience a chat interface that feels alive, responsive, and incredibly intuitive.
+
+## ✨ Why Ai Buddy?
+
+-   **⚡ Zero-Latency Feel**: Powered by optimistic UI updates and efficient streaming.
+-   **🎨 Cinematic Visuals**: Deep integration of **Framer Motion** for layout transitions and **Lenis** for buttery smooth scrolling.
+-   **🛠️ Developer First**: Built with strict **TypeScript**, modular **Next.js App Router** architecture, and **Radix UI** primitives.
+
+---
+
+# 🏛️ System Architecture
+
+We adhere to a clean, separation-of-concerns architecture where the UI assumes a reactive state driven by Zustand, while the standard Next.js Server Actions handle the heavy lifting of API streaming.
+
+## High-Level Data Flow
+
+```mermaid
+graph LR
+    User[👤 User] -->|Input| UI[🖥️ Client UI]
+    UI -->|Otimistic Update| Store[📦 Zustand Store]
+    UI -->|Server Action| API[☁️ Next.js Server]
+    API -->|Stream Request| OpenAI[🧠 OpenAI API]
+    OpenAI -->|Stream Chunks| API
+    API -->|Stream Response| UI
+    UI -->|Render Markdown| Display[📄 Chat Interface]
+    
+    style User fill:#fff,stroke:#333
+    style UI fill:#61DAFB,stroke:#333
+    style Store fill:#764ABC,stroke:#333
+    style API fill:#000000,stroke:#fff,color:#fff
+    style OpenAI fill:#412991,stroke:#fff,color:#fff
 ```
+
+## detailed Interaction Sequence
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant C as Client (Zustand)
+    participant S as Server Action
+    participant AI as OpenAI API
+    
+    U->>C: Types Message & Sends
+    C->>C: Add User Message (Optimistic)
+    C->>S: POST /chat (Message History)
+    S->>AI: Create Chat Completion (Stream=True)
+    loop Stream Chunks
+        AI-->>S: Delta Content
+        S-->>C: Stream Chunk
+        C->>C: Append to Assistant Message
+    end
+    S-->>C: Stream Complete
+    C->>C: Finalize State
+```
+
+---
+
+# 🎨 Visual Effects Architecture
+
+Our visual stack is layered to provide maximum performance with stunning aesthetics.
+
+| Layer | Technology | Purpose |
+| :--- | :--- | :--- |
+| **Logic** | **React 19** | Core component lifecycle and state orchestration. |
+| **Structure** | **Radix UI** | Unstyled, accessible primitives (Dialogs, Tooltips, Slots). |
+| **Styling** | **Tailwind v4** | Atomic CSS with JIT engine for zero-runtime overhead. |
+| **Motion** | **Framer Motion** | Physics-based animations for layout flows and presence. |
+| **Scroll** | **Lenis** | WebGL-like smooth scrolling normalization. |
+
+### 🌊 The "Flow" State
+We utilize **Lenis** to hijack native scrolling, replacing it with a momentum-based interpolation that makes every scroll event feel weighty and premium. Combined with `framer-motion`'s `AnimatePresence`, chat bubbles don't just appear—they **flow** into existence, respecting the user's current scroll velocity.
+
+---
+
+# 📂 Project Structure
+
+A meticulously organized codebase ensuring scalability and maintainability.
+
+```bash
 d:/Projects/Ai Buddy/
-├── 📁 app/                 # Next.js App Router directories
-│   ├── 📁 api/             # Backend API routes (OpenAI integration)
-│   ├── layout.tsx          # Root layout with global providers
-│   ├── page.tsx            # Main chat interface page
-│   └── globals.css         # Global styles and Tailwind directives
-├── 📁 components/          # Reusable UI components
-│   ├── 📁 ui/              # Shadcn/Radix UI primitive components
-│   └── ...                 # Feature-specific components (ChatBubble, etc.)
-├── 📁 lib/                 # Utility functions and shared logic
-│   ├── utils.ts            # Common helper functions (cn, etc.)
-│   └── ...
-├── 📁 hooks/               # Custom React hooks
-├── 📁 public/              # Static assets (images, icons)
-├── 📁 types/               # TypeScript type definitions
-└── package.json            # Project dependencies and scripts
+├── 📁 app/                    # 🚀 Next.js App Router System
+│   ├── 📁 api/                #    Server-side API routes & Edge Functions
+│   ├── 📁 chat-v2/            #    Experimental Chat Implementations
+│   ├── layout.tsx             #    Root Layout (Providers Injection)
+│   ├── page.tsx               #    Primary Application Entry
+│   └── globals.css            #    Tailwind V4 Directives & Theme Variables
+├── 📁 components/             # 🧩 UI Building Blocks
+│   ├── 📁 ui/                 #    Shadcn/Radix atomic components
+│   ├── chat-interface.tsx     #    Main Chat Orchestrator
+│   └── message-bubble.tsx     #    Polymorphic Message Renderer
+├── 📁 lib/                    # 🛠️ Utilities & Core Logic
+│   ├── store.ts               #    Zustand Global State Management
+│   ├── utils.ts               #    Style Mergers (clsx + tailwind-merge)
+│   └── openai.ts              #    OpenAI Singleton Configuration
+├── 📁 types/                  # 📐 TypeScript Definitions
+│   └── chat.ts                #    Shared Interface Definitions
+└── package.json               # 📦 Dependency Manifest
 ```
 
-### Core Components
+---
 
-*   **`app/page.tsx`**: The entry point for the chat application. It orchestrates the chat layout and main interaction flow.
-*   **`app/api/`**: Contains server-side logic for securely handling OpenAI API requests, ensuring API keys are never exposed to the client.
-*   **`components/ui/`**: A collection of accessible, reusable UI components (Buttons, Inputs, Dialogs) built on top of Radix UI.
-*   **`lib/store.ts`** (if applicable): Zustand store definition for managing global application state like chat history and user preferences.
+# ⚡ Getting Started
+
+Transform your local environment into an AI powerhouse.
+
+### 1️⃣ Clone & Install
+```bash
+git clone https://github.com/kirtan597/Ai-Buddy.git
+cd Ai-Buddy
+npm install
+```
+
+### 2️⃣ Configure Intelligence
+Create a `.env.local` file to connect the brain.
+```env
+OPENAI_API_KEY=sk-your-super-secret-key
+```
+
+### 3️⃣ Ignite
+```bash
+npm run dev
+```
+Visit `http://localhost:3000` and witness the magic.
 
 ---
 
-## ⚡ Getting Started
-
-Follow these steps to set up the project locally.
-
-### Prerequisites
-
-*   [Node.js](https://nodejs.org/) (Version 18.17 or higher)
-*   [npm](https://www.npmjs.com/) or [yarn](https://yarnpkg.com/)
-
-### Installation
-
-1.  **Clone the repository:**
-    ```bash
-    git clone https://github.com/kirtan597/Ai-Buddy.git
-    cd Ai-Buddy
-    ```
-
-2.  **Install dependencies:**
-    ```bash
-    npm install
-    ```
-
-3.  **Environment Setup:**
-    Create a `.env.local` file in the root directory and add your OpenAI API key:
-    ```env
-    OPENAI_API_KEY=your_openai_api_key_here
-    ```
-
-4.  **Run the development server:**
-    ```bash
-    npm run dev
-    ```
-
-5.  **Open the application:**
-    Open [http://localhost:3000](http://localhost:3000) in your browser to view the application.
+# 🤝 Contribution
+Innovation happens together.
+1.  **Fork** the repo.
+2.  **Branch** off (`feature/quantum-leap`).
+3.  **Commit** your brilliance.
+4.  **Push** and open a PR.
 
 ---
 
-## 🤝 Contributing
+<div align="center">
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+**Built with ❤️ by [Kirtan](https://github.com/kirtan597)**
 
-1.  Fork the repository.
-2.  Create your feature branch (`git checkout -b feature/AmazingFeature`).
-3.  Commit your changes (`git commit -m 'Add some AmazingFeature'`).
-4.  Push to the branch (`git push origin feature/AmazingFeature`).
-5.  Open a Pull Request.
-
----
-
-## 📄 License
-
-This project is licensed under the MIT License.
+</div>
