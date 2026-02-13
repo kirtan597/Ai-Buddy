@@ -19,6 +19,12 @@
 <a href="https://openai.com">
   <img src="https://img.shields.io/badge/OpenAI-API-412991?style=for-the-badge&logo=openai&logoColor=white" alt="OpenAI">
 </a>
+<a href="https://www.mongodb.com">
+  <img src="https://img.shields.io/badge/MongoDB-47A248?style=for-the-badge&logo=mongodb&logoColor=white" alt="MongoDB">
+</a>
+<a href="https://authjs.dev">
+  <img src="https://img.shields.io/badge/NextAuth.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white" alt="NextAuth">
+</a>
 
 </div>
 
@@ -28,19 +34,21 @@
 
 **Ai Buddy Chat** isn't just another chatbot—it's a **premium, architectural masterpiece** designed for developers who demand excellence. Built on the bleeding edge of web technology, it orchestrates a symphony of **Real-time AI**, **Fluid Animations**, and **Type-Safe Architecture**.
 
-Experience a chat interface that feels alive, responsive, and incredibly intuitive.
+Now featuring a **ChatGPT-like experience** with Guest Mode access limits, secure Google Authentication, and persistent cloud storage for all your conversations.
 
 ## ✨ Why Ai Buddy?
 
 -   **⚡ Zero-Latency Feel**: Powered by optimistic UI updates and efficient streaming.
 -   **🎨 Cinematic Visuals**: Deep integration of **Framer Motion** for layout transitions and **Lenis** for buttery smooth scrolling.
--   **🛠️ Developer First**: Built with strict **TypeScript**, modular **Next.js App Router** architecture, and **Radix UI** primitives.
+-   **🔐 Secure & Personal**: **Google OAuth** integration ensures your chats are private and persistent.
+-   **🧠 Smart Memory**: Conversations are stored in **MongoDB**, allowing you to pick up exactly where you left off across devices.
+-   **🆓 Guest Mode**: Try before you sign in. Guests get a 1-message preview before being prompted to unlock full access.
 
 ---
 
 # 🏛️ System Architecture
 
-We adhere to a clean, separation-of-concerns architecture where the UI assumes a reactive state driven by Zustand, while the standard Next.js Server Actions handle the heavy lifting of API streaming.
+We adhere to a clean, separation-of-concerns architecture where the UI assumes a reactive state driven by Zustand, whilst standard Next.js Server Actions handle the heavy lifting of API streaming and Database interaction.
 
 ## High-Level Data Flow
 
@@ -48,7 +56,9 @@ We adhere to a clean, separation-of-concerns architecture where the UI assumes a
 graph LR
     User[👤 User] -->|Input| UI[🖥️ Client UI]
     UI -->|Otimistic Update| Store[📦 Zustand Store]
-    UI -->|Server Action| API[☁️ Next.js Server]
+    UI -- Check Auth --> Auth[🔐 NextAuth]
+    Auth -- Verified --> API[☁️ Next.js Server]
+    API -->|Save Message| DB[(🍃 MongoDB)]
     API -->|Stream Request| OpenAI[🧠 OpenAI API]
     OpenAI -->|Stream Chunks| API
     API -->|Stream Response| UI
@@ -59,46 +69,38 @@ graph LR
     style Store fill:#764ABC,stroke:#333
     style API fill:#000000,stroke:#fff,color:#fff
     style OpenAI fill:#412991,stroke:#fff,color:#fff
+    style DB fill:#47A248,stroke:#fff,color:#fff
+    style Auth fill:#E34F26,stroke:#fff,color:#fff
 ```
 
-## detailed Interaction Sequence
+## Detailed Interaction Sequence
 
 ```mermaid
 sequenceDiagram
     participant U as User
     participant C as Client (Zustand)
     participant S as Server Action
+    participant D as MongoDB
     participant AI as OpenAI API
     
     U->>C: Types Message & Sends
-    C->>C: Add User Message (Optimistic)
-    C->>S: POST /chat (Message History)
-    S->>AI: Create Chat Completion (Stream=True)
-    loop Stream Chunks
-        AI-->>S: Delta Content
-        S-->>C: Stream Chunk
-        C->>C: Append to Assistant Message
+    alt Guest Limit Reached
+        C->>U: Show Login Modal
+    else Authenticated
+        C->>C: Add User Message (Optimistic)
+        C->>S: POST /chat (Message History)
+        S->>D: Save User Message
+        S->>AI: Create Chat Completion (Stream=True)
+        loop Stream Chunks
+            AI-->>S: Delta Content
+            S-->>C: Stream Chunk
+            C->>C: Append to Assistant Message
+        end
+        S->>D: Save Assistant Message
+        S-->>C: Stream Complete
+        C->>C: Finalize State
     end
-    S-->>C: Stream Complete
-    C->>C: Finalize State
 ```
-
----
-
-# 🎨 Visual Effects Architecture
-
-Our visual stack is layered to provide maximum performance with stunning aesthetics.
-
-| Layer | Technology | Purpose |
-| :--- | :--- | :--- |
-| **Logic** | **React 19** | Core component lifecycle and state orchestration. |
-| **Structure** | **Radix UI** | Unstyled, accessible primitives (Dialogs, Tooltips, Slots). |
-| **Styling** | **Tailwind v4** | Atomic CSS with JIT engine for zero-runtime overhead. |
-| **Motion** | **Framer Motion** | Physics-based animations for layout flows and presence. |
-| **Scroll** | **Lenis** | WebGL-like smooth scrolling normalization. |
-
-### 🌊 The "Flow" State
-We utilize **Lenis** to hijack native scrolling, replacing it with a momentum-based interpolation that makes every scroll event feel weighty and premium. Combined with `framer-motion`'s `AnimatePresence`, chat bubbles don't just appear—they **flow** into existence, respecting the user's current scroll velocity.
 
 ---
 
@@ -110,20 +112,20 @@ A meticulously organized codebase ensuring scalability and maintainability.
 d:/Projects/Ai Buddy/
 ├── 📁 app/                    # 🚀 Next.js App Router System
 │   ├── 📁 api/                #    Server-side API routes & Edge Functions
-│   ├── 📁 chat-v2/            #    Experimental Chat Implementations
+│   │   ├── 📁 auth/           #    NextAuth Handler
+│   │   └── 📁 chat-v2/        #    Chat Stream Handler
 │   ├── layout.tsx             #    Root Layout (Providers Injection)
-│   ├── page.tsx               #    Primary Application Entry
 │   └── globals.css            #    Tailwind V4 Directives & Theme Variables
 ├── 📁 components/             # 🧩 UI Building Blocks
 │   ├── 📁 ui/                 #    Shadcn/Radix atomic components
 │   ├── chat-interface.tsx     #    Main Chat Orchestrator
-│   └── message-bubble.tsx     #    Polymorphic Message Renderer
+│   ├── LoginModal.tsx         #    Auth Entry Point
+│   └── ChatSidebar.tsx        #    History Navigation
 ├── 📁 lib/                    # 🛠️ Utilities & Core Logic
 │   ├── store.ts               #    Zustand Global State Management
-│   ├── utils.ts               #    Style Mergers (clsx + tailwind-merge)
+│   ├── mongodb.ts             #    Database Connection
 │   └── openai.ts              #    OpenAI Singleton Configuration
-├── 📁 types/                  # 📐 TypeScript Definitions
-│   └── chat.ts                #    Shared Interface Definitions
+├── 📁 models/                 # 🍃 Mongoose Schemas (User, Conversation, Message)
 └── package.json               # 📦 Dependency Manifest
 ```
 
@@ -140,10 +142,20 @@ cd Ai-Buddy
 npm install
 ```
 
-### 2️⃣ Configure Intelligence
-Create a `.env.local` file to connect the brain.
+### 2️⃣ Configure Environment
+Create a `.env.local` file with your keys:
 ```env
+# AI Provider
 OPENAI_API_KEY=sk-your-super-secret-key
+
+# Database
+MONGODB_URI=mongodb://localhost:27017/ai-buddy
+
+# Authentication (Google Cloud Console)
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+NEXTAUTH_SECRET=your-generated-secret
+NEXTAUTH_URL=http://localhost:3000
 ```
 
 ### 3️⃣ Ignite
