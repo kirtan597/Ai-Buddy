@@ -4,16 +4,28 @@ import { useState, useRef, KeyboardEvent, useEffect } from 'react';
 import { useChatStore } from '@/lib/chat-v2/chatStore';
 import { Send, Paperclip, X, Loader2, Image, FileText, Smile } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useSession } from 'next-auth/react';
 
-export function InputBar() {
+interface InputBarProps {
+  onShowLogin?: () => void;
+}
+
+export function InputBar({ onShowLogin }: InputBarProps) {
   const [input, setInput] = useState('');
   const [attachments, setAttachments] = useState<File[]>([]);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
-  const { addMessage, isStreaming, isUploading, setUploading } = useChatStore();
+
+  const { data: session } = useSession();
+  const {
+    addMessage,
+    isStreaming,
+    guestMessageCount,
+    incrementGuestMessageCount,
+    currentSession
+  } = useChatStore();
 
   // Detect mobile devices
   useEffect(() => {
@@ -32,6 +44,12 @@ export function InputBar() {
     if (!input.trim() && attachments.length === 0) return;
     if (isStreaming) return;
 
+    // Guest limitation check
+    if (!session && guestMessageCount >= 1) {
+      onShowLogin?.();
+      return;
+    }
+
     const messageContent = input.trim();
     const messageAttachments = [...attachments];
 
@@ -40,6 +58,11 @@ export function InputBar() {
     setAttachments([]);
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
+    }
+
+    // Increment guest count if not logged in
+    if (!session) {
+      incrementGuestMessageCount();
     }
 
     // Add user message
@@ -60,6 +83,7 @@ export function InputBar() {
     try {
       const formData = new FormData();
       formData.append('message', messageContent);
+      formData.append('conversationId', currentSession?.id || '');
       messageAttachments.forEach(file => {
         formData.append('files', file);
       });
@@ -99,7 +123,7 @@ export function InputBar() {
           if (line.startsWith('data: ')) {
             const dataStr = line.slice(6);
             if (dataStr === '[DONE]') break;
-            
+
             try {
               const data = JSON.parse(dataStr);
               if (data.content) {
@@ -110,7 +134,7 @@ export function InputBar() {
                   content: accumulatedContent,
                   isStreaming: true,
                 });
-                
+
                 // Small delay to allow smooth scrolling
                 await new Promise(resolve => setTimeout(resolve, 10));
               } else if (data.error) {
@@ -147,7 +171,7 @@ export function InputBar() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInput(e.target.value);
-    
+
     // Auto-resize textarea with mobile-friendly limits
     const textarea = e.target;
     textarea.style.height = 'auto';
@@ -189,8 +213,8 @@ export function InputBar() {
                   className="flex items-center gap-2 md:gap-3 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-violet-200 dark:border-gray-700 rounded-xl px-3 py-2 md:px-4 md:py-3 shadow-lg"
                 >
                   {file.type.startsWith('image/') ? (
-                    <img 
-                      src={URL.createObjectURL(file)} 
+                    <img
+                      src={URL.createObjectURL(file)}
                       alt={file.name}
                       className="w-6 h-6 md:w-8 md:h-8 object-cover rounded-lg"
                     />
@@ -230,8 +254,8 @@ export function InputBar() {
               placeholder={isMobile ? "Type a message..." : "Type your message... (Shift+Enter for new line)"}
               className="w-full resize-none bg-transparent text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none text-sm md:text-base leading-relaxed"
               rows={1}
-              style={{ 
-                minHeight: '20px', 
+              style={{
+                minHeight: '20px',
                 maxHeight: isMobile ? '80px' : '120px',
                 fontSize: isMobile ? '16px' : '14px' // Prevent zoom on iOS
               }}

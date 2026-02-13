@@ -5,6 +5,9 @@ import { nanoid } from 'nanoid';
 
 interface ChatActions {
   createSession: () => void;
+  // New action to set sessions from API
+  setSessions: (sessions: ChatSession[]) => void;
+  fetchMessages: (sessionId: string) => Promise<void>;
   switchToSession: (sessionId: string) => void;
   deleteSession: (sessionId: string) => void;
   addMessage: (message: Omit<Message, 'id' | 'timestamp'>) => void;
@@ -15,9 +18,16 @@ interface ChatActions {
   setError: (error: string | null) => void;
   regenerateLastMessage: () => void;
   updateSessionTitle: (sessionId: string, title: string) => void;
+  // Guest mode tracking
+  incrementGuestMessageCount: () => void;
+  resetGuestMessageCount: () => void;
 }
 
-export const useChatStore = create<ChatState & ChatActions>()(
+interface ChatStateExtended extends ChatState {
+  guestMessageCount: number;
+}
+
+export const useChatStore = create<ChatStateExtended & ChatActions>()(
   devtools(
     persist(
       (set, get) => ({
@@ -27,6 +37,7 @@ export const useChatStore = create<ChatState & ChatActions>()(
         isStreaming: false,
         isUploading: false,
         error: null,
+        guestMessageCount: 0,
 
         // Actions
         createSession: () => {
@@ -49,9 +60,72 @@ export const useChatStore = create<ChatState & ChatActions>()(
           }));
         },
 
+        setSessions: (sessions) => {
+          set((state) => {
+            // Merge with existing sessions to preserve messages
+            // We want to use the new session metadata (title, time) from `sessions`
+            // But we want to keep the `messages` array from `state.sessions` if it's not empty.
+            if (!sessions) return state; // Safety check
+
+            const mergedSessions = sessions.map(newSession => {
+              const existing = state.sessions.find(s => s.id === newSession.id);
+              if (existing && existing.messages.length > 0) {
+                return { ...newSession, messages: existing.messages };
+              }
+              return newSession;
+            });
+
+            // Try to keep the current session if it exists in the new list, otherwise select the first one or create new
+            const currentId = state.currentSession?.id;
+            const exists = mergedSessions.find(s => s.id === currentId);
+
+            return {
+              sessions: mergedSessions,
+              currentSession: exists || mergedSessions[0] || null
+            }
+          });
+        },
+
+        fetchMessages: async (sessionId) => {
+          try {
+            const res = await fetch(`/api/conversation/${sessionId}/messages`);
+            if (!res.ok) throw new Error('Failed to fetch messages');
+            const messages = await res.json();
+
+            set((state) => {
+              // Map backend messages to frontend format
+              // Assuming API returns array of messages
+              const formattedMessages: Message[] = messages.map((m: any) => ({
+                id: m._id || m.id,
+                role: m.role,
+                content: m.content,
+                timestamp: new Date(m.createdAt || new Date()),
+                attachments: m.attachments || [],
+              }));
+
+              const updatedSessions = state.sessions.map(s =>
+                s.id === sessionId ? { ...s, messages: formattedMessages } : s
+              );
+
+              return {
+                sessions: updatedSessions,
+                currentSession: state.currentSession?.id === sessionId
+                  ? { ...state.currentSession, messages: formattedMessages }
+                  : state.currentSession
+              };
+            });
+          } catch (error) {
+            console.error('Error fetching messages:', error);
+          }
+        },
+
         switchToSession: (sessionId) => {
           set((state) => {
             const session = state.sessions.find(s => s.id === sessionId);
+            // We also trigger fetchMessages here if needed? 
+            // Better to let the component trigger it or trigger it here if store supports side effects well.
+            // Zustand actions can be async. But `switchToSession` is currently sync in interface.
+            // I'll keep it sync and let the component call fetchMessages.
             return session ? { currentSession: session } : state;
           });
         },
@@ -59,10 +133,10 @@ export const useChatStore = create<ChatState & ChatActions>()(
         deleteSession: (sessionId) => {
           set((state) => {
             const updatedSessions = state.sessions.filter(s => s.id !== sessionId);
-            const newCurrentSession = state.currentSession?.id === sessionId 
+            const newCurrentSession = state.currentSession?.id === sessionId
               ? (updatedSessions[0] || null)
               : state.currentSession;
-            
+
             return {
               sessions: updatedSessions,
               currentSession: newCurrentSession,
@@ -91,7 +165,7 @@ export const useChatStore = create<ChatState & ChatActions>()(
 
             return {
               currentSession: updatedSession,
-              sessions: state.sessions.map(s => 
+              sessions: state.sessions.map(s =>
                 s.id === updatedSession.id ? updatedSession : s
               ),
             };
@@ -112,7 +186,7 @@ export const useChatStore = create<ChatState & ChatActions>()(
 
             return {
               currentSession: updatedSession,
-              sessions: state.sessions.map(s => 
+              sessions: state.sessions.map(s =>
                 s.id === updatedSession.id ? updatedSession : s
               ),
             };
@@ -121,12 +195,12 @@ export const useChatStore = create<ChatState & ChatActions>()(
 
         updateSessionTitle: (sessionId, title) => {
           set((state) => {
-            const updatedSessions = state.sessions.map(session => 
-              session.id === sessionId 
+            const updatedSessions = state.sessions.map(session =>
+              session.id === sessionId
                 ? { ...session, title, updatedAt: new Date() }
                 : session
             );
-            
+
             const updatedCurrentSession = state.currentSession?.id === sessionId
               ? { ...state.currentSession, title, updatedAt: new Date() }
               : state.currentSession;
@@ -150,10 +224,10 @@ export const useChatStore = create<ChatState & ChatActions>()(
         regenerateLastMessage: () => {
           set((state) => {
             if (!state.currentSession) return state;
-            
+
             const messages = state.currentSession.messages;
             const lastAssistantIndex = messages.findLastIndex(m => m.role === 'assistant');
-            
+
             if (lastAssistantIndex === -1) return state;
 
             const updatedSession = {
@@ -164,18 +238,22 @@ export const useChatStore = create<ChatState & ChatActions>()(
 
             return {
               currentSession: updatedSession,
-              sessions: state.sessions.map(s => 
+              sessions: state.sessions.map(s =>
                 s.id === updatedSession.id ? updatedSession : s
               ),
             };
           });
         },
+
+        incrementGuestMessageCount: () => set((state) => ({ guestMessageCount: state.guestMessageCount + 1 })),
+        resetGuestMessageCount: () => set({ guestMessageCount: 0 }),
       }),
       {
         name: 'ai-buddy-chat-storage',
-        partialize: (state) => ({ 
+        partialize: (state) => ({
           sessions: state.sessions,
-          currentSession: state.currentSession 
+          currentSession: state.currentSession,
+          guestMessageCount: state.guestMessageCount
         }),
       }
     ),

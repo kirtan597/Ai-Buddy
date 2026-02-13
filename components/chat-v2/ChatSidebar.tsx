@@ -7,12 +7,14 @@ import { SessionMenu } from './SessionMenu';
 import { useLenisScroll } from '@/hooks/useLenisScroll';
 import { Plus, MessageSquare, Sun, Moon, Settings, Search, X } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useSession } from 'next-auth/react';
 
 export function ChatSidebar() {
-  const { sessions, currentSession, createSession, switchToSession } = useChatStore();
+  const { sessions, currentSession, createSession, switchToSession, setSessions, fetchMessages } = useChatStore();
   const { theme, toggleTheme } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
-  
+  const { data: session } = useSession();
+
   // Lenis smooth scrolling for session list
   const { scrollRef } = useLenisScroll({
     duration: 0.8,
@@ -20,12 +22,48 @@ export function ChatSidebar() {
     autoScroll: false, // Don't auto-scroll in sidebar
   });
 
-  const filteredSessions = sessions.filter(session => 
+  const filteredSessions = sessions.filter(session =>
     session.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    session.messages.some(msg => 
+    session.messages.some(msg =>
       msg.content.toLowerCase().includes(searchQuery.toLowerCase())
     )
   );
+
+  const handleNewChat = async () => {
+    if (session?.user) {
+      try {
+        const res = await fetch('/api/conversation/create', {
+          method: 'POST',
+          body: JSON.stringify({ title: 'New Chat' }),
+        });
+
+        if (!res.ok) throw new Error('Failed to create chat');
+
+        const data = await res.json();
+
+        // Map backend response to frontend session format
+        const newSession = {
+          id: data._id, // Use _id from MongoDB
+          title: data.title,
+          messages: [],
+          createdAt: new Date(data.createdAt),
+          updatedAt: new Date(data.updatedAt),
+          settings: {
+            model: 'openai/gpt-4o-mini',
+            temperature: 0.7,
+            maxTokens: 2000,
+          },
+        };
+
+        setSessions([newSession, ...sessions]);
+        switchToSession(newSession.id);
+      } catch (error) {
+        console.error('Error creating new chat:', error);
+      }
+    } else {
+      createSession();
+    }
+  };
 
   return (
     <div className="h-full bg-white/60 dark:bg-gray-900/60 backdrop-blur-sm flex flex-col">
@@ -36,17 +74,17 @@ export function ChatSidebar() {
           </div>
           <h2 className="font-semibold text-gray-900 dark:text-white text-sm md:text-base">Chat History</h2>
         </div>
-        
+
         <motion.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
-          onClick={createSession}
+          onClick={handleNewChat}
           className="w-full flex items-center gap-2 px-3 py-2 md:px-4 md:py-3 bg-gradient-to-r from-violet-500 to-indigo-500 text-white rounded-xl hover:from-violet-600 hover:to-indigo-600 transition-all duration-200 shadow-lg text-sm md:text-base touch-manipulation"
         >
           <Plus className="w-3 h-3 md:w-4 md:h-4" />
           New Chat
         </motion.button>
-        
+
         {/* Search - Mobile Optimized */}
         <div className="relative mt-3 md:mt-4">
           <Search className="absolute left-2 md:left-3 top-1/2 -translate-y-1/2 w-3 h-3 md:w-4 md:h-4 text-gray-400" />
@@ -72,7 +110,7 @@ export function ChatSidebar() {
 
       {/* Lenis Smooth Scrolling Session List - Mobile Optimized */}
       <div className="flex-1 min-h-0">
-        <div 
+        <div
           ref={scrollRef}
           className="h-full"
           style={{
@@ -104,12 +142,14 @@ export function ChatSidebar() {
                   animate={{ opacity: 1, x: 0 }}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  onClick={() => switchToSession(session.id)}
-                  className={`group p-2 md:p-3 rounded-lg cursor-pointer transition-all duration-200 touch-manipulation ${
-                    currentSession?.id === session.id
-                      ? 'bg-gradient-to-r from-violet-100 to-indigo-100 dark:from-violet-900/30 dark:to-indigo-900/30 border border-violet-200 dark:border-violet-700'
-                      : 'hover:bg-gray-100 dark:hover:bg-gray-800'
-                  }`}
+                  onClick={() => {
+                    switchToSession(session.id);
+                    fetchMessages(session.id);
+                  }}
+                  className={`group p-2 md:p-3 rounded-lg cursor-pointer transition-all duration-200 touch-manipulation ${currentSession?.id === session.id
+                    ? 'bg-gradient-to-r from-violet-100 to-indigo-100 dark:from-violet-900/30 dark:to-indigo-900/30 border border-violet-200 dark:border-violet-700'
+                    : 'hover:bg-gray-100 dark:hover:bg-gray-800'
+                    }`}
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1 min-w-0">
@@ -142,8 +182,8 @@ export function ChatSidebar() {
           {theme === 'light' ? <Moon className="w-3 h-3 md:w-4 md:h-4" /> : <Sun className="w-3 h-3 md:w-4 md:h-4" />}
           <span>{theme === 'light' ? 'Dark Mode' : 'Light Mode'}</span>
         </motion.button>
-        
-        <motion.button 
+
+        <motion.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           className="w-full flex items-center gap-2 md:gap-3 px-2 py-2 md:px-3 md:py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors text-xs md:text-sm touch-manipulation"
