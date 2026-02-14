@@ -44,8 +44,13 @@ export function InputBar({ onShowLogin }: InputBarProps) {
     // Check if session is loading to prevent premature guest blocking
     if (status === 'loading') return;
 
+    // Safety: If logged in, ensure guest count is reset
+    if (status === 'authenticated' && guestMessageCount > 0) {
+      resetGuestMessageCount();
+    }
+
     // Guest limitation check - STRICTLY only if not logged in
-    if (!session && guestMessageCount >= 1) {
+    if (status === 'unauthenticated' && guestMessageCount >= 1) {
       onShowLogin?.();
       return;
     }
@@ -66,7 +71,7 @@ export function InputBar({ onShowLogin }: InputBarProps) {
     }
 
     // Increment guest count if not logged in
-    if (!session) {
+    if (status === 'unauthenticated') {
       incrementGuestMessageCount();
     }
 
