@@ -86,8 +86,7 @@ export async function POST(request: NextRequest) {
       userContent = `${fileInfo} ${userContent}`;
     }
 
-    // DB Operations: Verify User & Load History
-    let isPersisted = false;
+    // DB Operations: Verify User & Persist Message
     let userId = null;
     let conversationHistory: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [];
 
@@ -97,30 +96,39 @@ export async function POST(request: NextRequest) {
         const user = await User.findOne({ email: session.user.email });
         if (user) {
           userId = user._id;
-          const conv = await Conversation.findOne({ _id: conversationId, userId: user._id });
-          if (conv) {
-            isPersisted = true;
 
-            // Fetch history BEFORE saving new message to avoid duplication in context
-            const history = await Message.find({ conversationId })
-              .sort({ createdAt: -1 })
-              .limit(20);
+          // Find or Create Conversation
+          // Since we use nanoid from frontend, we trust it as the ID
+          let conv = await Conversation.findOne({ _id: conversationId, userId: user._id });
 
-            conversationHistory = history.reverse().map(m => ({
-              role: m.role as 'user' | 'assistant' | 'system',
-              content: m.content
-            }));
-
-            // Save User Message
-            await Message.create({
-              conversationId,
-              role: 'user',
-              content: userContent
+          if (!conv) {
+            console.log(`Creating new conversation: ${conversationId}`);
+            conv = await Conversation.create({
+              _id: conversationId,
+              userId: user._id,
+              title: userContent.slice(0, 50) || 'New Chat'
             });
-
-            // Update conversation timestamp
-            await Conversation.findByIdAndUpdate(conversationId, { updatedAt: new Date() });
           }
+
+          // Fetch history (excluding the one we are about to add)
+          const history = await Message.find({ conversationId })
+            .sort({ createdAt: -1 })
+            .limit(20);
+
+          conversationHistory = history.reverse().map(m => ({
+            role: m.role as 'user' | 'assistant' | 'system',
+            content: m.content
+          }));
+
+          // Save User Message
+          await Message.create({
+            conversationId,
+            role: 'user',
+            content: userContent
+          });
+
+          // Update conversation timestamp
+          await Conversation.findByIdAndUpdate(conversationId, { updatedAt: new Date() });
         }
       } catch (e) {
         console.error('DB Error during request setup:', e);
@@ -226,7 +234,7 @@ export async function POST(request: NextRequest) {
           }
 
           // Save Assistant Message to DB
-          if (isPersisted && fullResponseContent && conversationId) {
+          if (fullResponseContent && conversationId) {
             try {
               await Message.create({
                 conversationId,

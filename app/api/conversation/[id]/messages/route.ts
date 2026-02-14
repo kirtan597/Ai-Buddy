@@ -33,7 +33,12 @@ export async function GET(
         });
 
         if (!conversation) {
-            return new NextResponse('Conversation not found', { status: 404 });
+            console.log(`Conversation not found: ${conversationId}`);
+            // If conversation doesn't exist, we return empty array instead of 404 to prevent client errors on new chats?
+            // No, 404 is correct, but frontend `fetchMessages` might treat 404 as error.
+            // Let's return empty array [] if not found, to be robust for "New Chat" scenarios that might not have hit DB yet.
+            // Actually, if it's not in DB, it has no messages.
+            return NextResponse.json([]);
         }
 
         const messages = await Message.find({ conversationId }).sort({ createdAt: 1 });

@@ -1,14 +1,14 @@
 import mongoose, { Schema, Model } from 'mongoose';
 
 export interface IMessage {
-    conversationId: mongoose.Types.ObjectId;
+    conversationId: string;
     role: 'user' | 'assistant' | 'system';
     content: string;
     createdAt: Date;
 }
 
 const MessageSchema = new Schema<IMessage>({
-    conversationId: { type: Schema.Types.ObjectId, ref: 'Conversation', required: true, index: true },
+    conversationId: { type: String, ref: 'Conversation', required: true, index: true },
     role: { type: String, enum: ['user', 'assistant', 'system'], required: true },
     content: { type: String, required: true },
 }, {
