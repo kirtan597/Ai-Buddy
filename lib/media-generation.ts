@@ -23,7 +23,7 @@ export async function generateImage(prompt: string): Promise<MediaGenerationResu
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                model: 'black-forest-labs/flux-1-schnell',
+                model: 'stabilityai/stable-diffusion-xl-base-1.0',
                 messages: [{ role: 'user', content: prompt }],
             }),
         });
