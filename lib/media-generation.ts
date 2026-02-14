@@ -13,7 +13,8 @@ export async function generateImage(prompt: string): Promise<MediaGenerationResu
     }
 
     try {
-        // Using Flux 1 Schnell which is standard on OpenRouter
+        // Using OpenAI GPT-5 Image Mini (via OpenRouter 2026)
+        console.log('Generating image with model: openai/gpt-5-image-mini');
         const response = await fetch(`${OPENROUTER_BASE_URL}/chat/completions`, {
             method: 'POST',
             headers: {
@@ -23,7 +24,7 @@ export async function generateImage(prompt: string): Promise<MediaGenerationResu
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                model: 'stabilityai/stable-diffusion-xl-base-1.0',
+                model: 'openai/gpt-5-image-mini',
                 messages: [{ role: 'user', content: prompt }],
             }),
         });

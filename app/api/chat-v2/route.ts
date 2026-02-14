@@ -208,6 +208,7 @@ export async function POST(request: NextRequest) {
 
               let result;
               if (functionName === 'generate_image') {
+                console.log('Triggering image generation...');
                 result = await generateImage(args.prompt);
               } else if (functionName === 'generate_video') {
                 result = await generateVideo(args.prompt);
