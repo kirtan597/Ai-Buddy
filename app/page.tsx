@@ -27,30 +27,33 @@ export default function Home() {
             key="landing"
             exit={{ opacity: 0, scale: 1.1, filter: "blur(10px)" }}
             transition={{ duration: 0.8 }}
-            className="min-h-[100dvh] w-full flex flex-col items-center justify-center px-6 py-12 md:px-8 md:py-16 safe-area-inset overflow-y-auto"
+            className="h-[100dvh] w-full flex flex-col items-center justify-center px-6 py-6 md:px-8 md:py-16 safe-area-inset overflow-hidden"
           >
-            <div className="max-w-7xl w-full flex flex-col-reverse md:grid md:grid-cols-2 gap-12 md:gap-16 items-center">
+            <div className="max-w-7xl w-full flex flex-col-reverse md:grid md:grid-cols-2 gap-6 md:gap-16 items-center">
               {/* Left Column - Content */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, ease: "easeOut" }}
-                className="space-y-6 md:space-y-8 text-center md:text-left"
+                className="space-y-6 md:space-y-8 text-center md:text-left z-20"
               >
                 {/* Headline */}
                 <div className="space-y-2 md:space-y-4">
                   <h1 className="text-4xl md:text-7xl font-bold text-gray-900 tracking-tight">
                     AI Buddy
                   </h1>
-                  <h2 className="text-2xl md:text-4xl font-semibold text-violet-600">
+                  <h2 className="text-xl md:text-4xl font-semibold text-violet-600">
                     Your Ultimate Chatbot
                   </h2>
                 </div>
 
                 {/* Description */}
-                <p className="text-base md:text-lg text-gray-600 leading-relaxed max-w-md mx-auto md:mx-0">
+                <p className="text-sm md:text-lg text-gray-600 leading-relaxed max-w-md mx-auto md:mx-0 hidden md:block">
                   Experience intelligent conversations powered by advanced AI technology.
                   AI Buddy is your trusted companion for seamless communication and productivity.
+                </p>
+                <p className="text-sm text-gray-600 leading-relaxed max-w-xs mx-auto md:hidden">
+                  Experience intelligent conversations powered by advanced AI.
                 </p>
 
                 {/* CTA Button */}
@@ -72,7 +75,7 @@ export default function Home() {
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.8, ease: "easeOut", delay: 0.2 }}
-                className="relative flex items-center justify-center"
+                className="relative flex items-center justify-center z-10"
               >
                 {/* Gradient Glow Background */}
                 <motion.div
@@ -100,7 +103,7 @@ export default function Home() {
                     repeat: Infinity,
                     ease: "easeInOut"
                   }}
-                  className="relative z-10 w-full max-w-sm md:max-w-lg drop-shadow-2xl"
+                  className="relative z-10 w-48 md:w-full md:max-w-lg drop-shadow-2xl"
                 />
               </motion.div>
             </div>
