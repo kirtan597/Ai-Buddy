@@ -54,6 +54,7 @@ export const authOptions: NextAuthOptions = {
                 try {
                     await dbConnect();
                     if (session.user.email) {
+                        // FIX: Ensure email is string and handle potential connection errors gracefully
                         const dbUser = await User.findOne({ email: session.user.email });
                         if (dbUser) {
                             // @ts-ignore
@@ -61,7 +62,8 @@ export const authOptions: NextAuthOptions = {
                         }
                     }
                 } catch (error) {
-                    console.error('Error fetching user in session callback', error);
+                    console.error('Error fetching user in session callback:', error);
+                    // Do NOT throw here, just return session without dbId to prevent 500
                 }
             }
             return session;

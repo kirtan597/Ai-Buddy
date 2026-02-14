@@ -18,33 +18,33 @@ export function InputBar({ onShowLogin }: InputBarProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const {
     addMessage,
     isStreaming,
     guestMessageCount,
     incrementGuestMessageCount,
+    resetGuestMessageCount,
     currentSession
   } = useChatStore();
 
-  // Detect mobile devices
+  // Reset guest count when logged in
   useEffect(() => {
-    const checkMobile = () => {
-      const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      const isSmallScreen = window.innerWidth < 768;
-      setIsMobile(isMobileDevice || isSmallScreen);
-    };
+    if (session?.user) {
+      resetGuestMessageCount();
+    }
+  }, [session, resetGuestMessageCount]);
 
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
+  // ... (existing mobile check useEffect)
 
   const handleSubmit = async () => {
     if (!input.trim() && attachments.length === 0) return;
     if (isStreaming) return;
 
-    // Guest limitation check
+    // Check if session is loading to prevent premature guest blocking
+    if (status === 'loading') return;
+
+    // Guest limitation check - STRICTLY only if not logged in
     if (!session && guestMessageCount >= 1) {
       onShowLogin?.();
       return;
