@@ -79,9 +79,30 @@ export const useChatStore = create<ChatStateExtended & ChatActions>()(
             const currentId = state.currentSession?.id;
             const exists = mergedSessions.find(s => s.id === currentId);
 
+            // Ensure there is always a current session
+            let newCurrentSession = exists || mergedSessions[0] || null;
+
+            if (!newCurrentSession && mergedSessions.length === 0) {
+              // If no sessions exist after merge, create a fresh one to avoid null state
+              const newSession: ChatSession = {
+                id: nanoid(),
+                title: 'New Chat',
+                messages: [],
+                createdAt: new Date(),
+                updatedAt: new Date(),
+                settings: {
+                  model: 'openai/gpt-4o-mini',
+                  temperature: 0.7,
+                  maxTokens: 2000,
+                },
+              };
+              mergedSessions.push(newSession);
+              newCurrentSession = newSession;
+            }
+
             return {
               sessions: mergedSessions,
-              currentSession: exists || mergedSessions[0] || null
+              currentSession: newCurrentSession
             }
           });
         },

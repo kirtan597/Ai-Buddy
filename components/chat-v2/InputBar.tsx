@@ -53,6 +53,11 @@ export function InputBar({ onShowLogin }: InputBarProps) {
     const messageContent = input.trim();
     const messageAttachments = [...attachments];
 
+    // Ensure session exists
+    if (!currentSession) {
+      useChatStore.getState().createSession();
+    }
+
     // Clear input immediately
     setInput('');
     setAttachments([]);
