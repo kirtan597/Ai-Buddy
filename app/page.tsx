@@ -19,7 +19,7 @@ export default function Home() {
   };
 
   return (
-    <main className="mobile-vh overflow-hidden mobile-optimized">
+    <main className="min-h-[100dvh] mobile-optimized bg-gradient-to-br from-violet-50 via-purple-50 to-indigo-50">
       <AnimatePresence mode="wait">
         {!isLaunched ? (
           // === AI BUDDY LANDING PAGE ===
@@ -27,9 +27,9 @@ export default function Home() {
             key="landing"
             exit={{ opacity: 0, scale: 1.1, filter: "blur(10px)" }}
             transition={{ duration: 0.8 }}
-            className="mobile-vh bg-gradient-to-br from-violet-50 via-purple-50 to-indigo-50 flex items-center justify-center px-4 py-8 md:px-8 md:py-16 safe-area-inset"
+            className="min-h-[100dvh] w-full flex flex-col items-center justify-center px-6 py-12 md:px-8 md:py-16 safe-area-inset overflow-y-auto"
           >
-            <div className="max-w-7xl w-full grid md:grid-cols-2 gap-8 md:gap-16 items-center">
+            <div className="max-w-7xl w-full flex flex-col-reverse md:grid md:grid-cols-2 gap-12 md:gap-16 items-center">
               {/* Left Column - Content */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -49,13 +49,13 @@ export default function Home() {
 
                 {/* Description */}
                 <p className="text-base md:text-lg text-gray-600 leading-relaxed max-w-md mx-auto md:mx-0">
-                  Experience intelligent conversations powered by advanced AI technology. 
+                  Experience intelligent conversations powered by advanced AI technology.
                   AI Buddy is your trusted companion for seamless communication and productivity.
                 </p>
 
                 {/* CTA Button */}
                 <motion.button
-                  whileHover={{ 
+                  whileHover={{
                     scale: 1.05,
                     boxShadow: "0 20px 40px rgba(124, 58, 237, 0.3)"
                   }}
@@ -112,7 +112,7 @@ export default function Home() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 1 }}
-            className="mobile-vh"
+            className="h-[100dvh] w-full overflow-hidden"
           >
             <ChatInterface />
           </motion.div>
