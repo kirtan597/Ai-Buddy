@@ -96,7 +96,7 @@ function ChatInterfaceContent() {
   }, [sidebarOpen, isMobile]);
 
   return (
-    <div className="h-screen bg-gradient-to-br from-violet-50 via-purple-50 to-indigo-50 dark:from-gray-900 dark:via-purple-900/20 dark:to-indigo-900/20 flex relative overflow-hidden">
+    <div className="h-[100dvh] bg-gradient-to-br from-violet-50 via-purple-50 to-indigo-50 dark:from-gray-900 dark:via-purple-900/20 dark:to-indigo-900/20 flex relative overflow-hidden">
 
       <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} />
 

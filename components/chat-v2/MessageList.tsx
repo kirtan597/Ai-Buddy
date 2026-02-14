@@ -11,14 +11,14 @@ export function MessageList() {
   const { currentSession, isStreaming } = useChatStore();
   const [isSessionSwitching, setIsSessionSwitching] = useState(false);
   const [previousSessionId, setPreviousSessionId] = useState<string | null>(null);
-  
-  const { 
-    scrollRef, 
-    scrollToBottom, 
-    forceScrollToBottom, 
-    shouldAutoScroll, 
+
+  const {
+    scrollRef,
+    scrollToBottom,
+    forceScrollToBottom,
+    shouldAutoScroll,
     isUserScrolling,
-    isAtBottom 
+    isAtBottom
   } = useLenisScroll({
     duration: 1.2,
     smooth: true,
@@ -31,7 +31,7 @@ export function MessageList() {
     if (currentSession?.id !== previousSessionId) {
       setIsSessionSwitching(true);
       setPreviousSessionId(currentSession?.id || null);
-      
+
       // Much shorter delay - almost instant
       setTimeout(() => {
         setIsSessionSwitching(false);
@@ -59,7 +59,7 @@ export function MessageList() {
   if (!currentSession?.messages.length) {
     return (
       <div className="absolute inset-0 flex items-center justify-center p-4 md:p-8">
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="text-center max-w-sm md:max-w-md w-full"
@@ -93,7 +93,7 @@ export function MessageList() {
   return (
     <div className="absolute inset-0">
       {/* Lenis Scroll Container */}
-      <div 
+      <div
         ref={scrollRef}
         className="h-full"
         style={{
@@ -101,12 +101,12 @@ export function MessageList() {
           position: 'relative'
         }}
       >
-        <div className="max-w-4xl mx-auto p-3 md:p-6 space-y-4 md:space-y-6 pb-16 md:pb-20 min-h-full">
+        <div className="max-w-4xl mx-auto p-3 md:p-6 space-y-4 md:space-y-6 pb-32 md:pb-36 min-h-full">
           {/* Completely remove AnimatePresence for session switching - it causes lag */}
           {currentSession.messages.map((message, index) => (
-            <MessageBubble 
+            <MessageBubble
               key={`${currentSession.id}-${message.id}`} // Force re-render with session ID
-              message={message} 
+              message={message}
               index={index}
               isSessionSwitching={isSessionSwitching}
             />
