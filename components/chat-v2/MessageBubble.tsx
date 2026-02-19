@@ -3,7 +3,9 @@
 import { Message } from '@/types/chat-v2';
 import { motion } from 'framer-motion';
 import { Copy, User, Bot, RotateCcw, ThumbsUp, ThumbsDown } from 'lucide-react';
+
 import { useState } from 'react';
+import ReactMarkdown from 'react-markdown';
 
 interface MessageBubbleProps {
   message: Message;
@@ -34,31 +36,28 @@ export function MessageBubble({ message, index = 0, isSessionSwitching = false }
 
       <div className={`max-w-[85%] md:max-w-[80%] ${isUser ? 'order-first' : ''}`}>
         {/* Message Content - Mobile Optimized */}
-        <div className={`rounded-2xl px-4 py-3 md:px-6 md:py-4 shadow-lg backdrop-blur-sm ${
-          isUser
+        <div className={`rounded-2xl px-4 py-3 md:px-6 md:py-4 shadow-lg backdrop-blur-sm ${isUser
             ? 'bg-gradient-to-r from-violet-500 to-indigo-500 text-white'
             : 'bg-white/80 dark:bg-gray-800/80 border border-violet-200 dark:border-gray-700 text-gray-900 dark:text-white'
-        }`}>
+          }`}>
           {/* Attachments - Mobile Optimized */}
           {message.attachments && message.attachments.length > 0 && (
             <div className="mb-3 md:mb-4 space-y-2 md:space-y-3">
               {message.attachments.map((attachment) => (
                 <div
                   key={attachment.id}
-                  className={`flex items-center gap-2 md:gap-3 p-2 md:p-3 rounded-xl ${
-                    isUser ? 'bg-white/20' : 'bg-violet-50 dark:bg-violet-900/20'
-                  }`}
+                  className={`flex items-center gap-2 md:gap-3 p-2 md:p-3 rounded-xl ${isUser ? 'bg-white/20' : 'bg-violet-50 dark:bg-violet-900/20'
+                    }`}
                 >
                   {attachment.type === 'image' ? (
-                    <img 
-                      src={attachment.url} 
+                    <img
+                      src={attachment.url}
                       alt={attachment.name}
                       className="w-10 h-10 md:w-12 md:h-12 object-cover rounded-lg"
                     />
                   ) : (
-                    <div className={`w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center ${
-                      isUser ? 'bg-white/30' : 'bg-violet-100 dark:bg-violet-800'
-                    }`}>
+                    <div className={`w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center ${isUser ? 'bg-white/30' : 'bg-violet-100 dark:bg-violet-800'
+                      }`}>
                       <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                       </svg>
@@ -74,13 +73,27 @@ export function MessageBubble({ message, index = 0, isSessionSwitching = false }
           )}
 
           {/* Text Content - Mobile Optimized */}
-          <div className="whitespace-pre-wrap break-words leading-relaxed text-sm md:text-base">
-            {message.content}
+          <div className="break-words leading-relaxed text-sm md:text-base">
+            <ReactMarkdown
+              components={{
+                img: ({ node, ...props }) => (
+                  <img {...props} className="max-w-full rounded-lg my-2 shadow-md" style={{ maxHeight: '512px' }} />
+                ),
+                a: ({ node, ...props }) => (
+                  <a {...props} className="text-blue-500 hover:underline" target="_blank" rel="noopener noreferrer" />
+                ),
+                p: ({ node, ...props }) => (
+                  <p {...props} className="my-1 first:mt-0 last:mb-0" />
+                ),
+              }}
+            >
+              {message.content}
+            </ReactMarkdown>
             {message.isStreaming && (
               <motion.span
                 animate={{ opacity: [1, 0] }}
                 transition={{ duration: 0.8, repeat: Infinity }}
-                className="inline-block w-2 h-4 md:h-5 bg-current ml-1 rounded-sm"
+                className="inline-block w-2 h-4 md:h-5 bg-current ml-1 rounded-sm align-middle"
               />
             )}
           </div>
@@ -98,7 +111,7 @@ export function MessageBubble({ message, index = 0, isSessionSwitching = false }
             >
               <Copy className="w-3 h-3 md:w-4 md:h-4" />
             </motion.button>
-            
+
             <motion.button
               whileHover={shouldAnimate ? { scale: 1.1 } : {}}
               whileTap={shouldAnimate ? { scale: 0.9 } : {}}
@@ -107,7 +120,7 @@ export function MessageBubble({ message, index = 0, isSessionSwitching = false }
             >
               <RotateCcw className="w-3 h-3 md:w-4 md:h-4" />
             </motion.button>
-            
+
             <motion.button
               whileHover={shouldAnimate ? { scale: 1.1 } : {}}
               whileTap={shouldAnimate ? { scale: 0.9 } : {}}
@@ -116,7 +129,7 @@ export function MessageBubble({ message, index = 0, isSessionSwitching = false }
             >
               <ThumbsUp className="w-3 h-3 md:w-4 md:h-4" />
             </motion.button>
-            
+
             <motion.button
               whileHover={shouldAnimate ? { scale: 1.1 } : {}}
               whileTap={shouldAnimate ? { scale: 0.9 } : {}}
@@ -125,7 +138,7 @@ export function MessageBubble({ message, index = 0, isSessionSwitching = false }
             >
               <ThumbsDown className="w-3 h-3 md:w-4 md:h-4" />
             </motion.button>
-            
+
             {copied && (
               <motion.span
                 initial={{ opacity: 0, scale: 0.8 }}
@@ -140,12 +153,11 @@ export function MessageBubble({ message, index = 0, isSessionSwitching = false }
         )}
 
         {/* Timestamp - Mobile Optimized */}
-        <div className={`text-xs text-gray-500 dark:text-gray-400 mt-1 md:mt-2 opacity-70 ${
-          isUser ? 'text-right' : 'text-left ml-1 md:ml-2'
-        }`}>
-          {new Date(message.timestamp).toLocaleTimeString([], { 
-            hour: '2-digit', 
-            minute: '2-digit' 
+        <div className={`text-xs text-gray-500 dark:text-gray-400 mt-1 md:mt-2 opacity-70 ${isUser ? 'text-right' : 'text-left ml-1 md:ml-2'
+          }`}>
+          {new Date(message.timestamp).toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit'
           })}
         </div>
       </div>

@@ -86,7 +86,8 @@ export async function POST(request: NextRequest) {
       userContent = `${fileInfo} ${userContent}`;
     }
 
-    // DB Operations: Verify User & Persist Message
+
+    // DB Operations: Verify User & Persist Message (Best Effort)
     let userId = null;
     let conversationHistory: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [];
 
@@ -98,40 +99,44 @@ export async function POST(request: NextRequest) {
           userId = user._id;
 
           // Find or Create Conversation
-          // Since we use nanoid from frontend, we trust it as the ID
           let conv = await Conversation.findOne({ _id: conversationId, userId: user._id });
 
           if (!conv) {
             console.log(`Creating new conversation: ${conversationId}`);
-            conv = await Conversation.create({
-              _id: conversationId,
-              userId: user._id,
-              title: userContent.slice(0, 50) || 'New Chat'
-            });
+            try {
+              conv = await Conversation.create({
+                _id: conversationId,
+                userId: user._id,
+                title: userContent.slice(0, 50) || 'New Chat'
+              });
+            } catch (e) { console.error('Failed to create conv, proceeding anyway', e); }
           }
 
-          // Fetch history (excluding the one we are about to add)
-          const history = await Message.find({ conversationId })
-            .sort({ createdAt: -1 })
-            .limit(20);
+          // Fetch history
+          try {
+            const history = await Message.find({ conversationId })
+              .sort({ createdAt: -1 })
+              .limit(20);
 
-          conversationHistory = history.reverse().map(m => ({
-            role: m.role as 'user' | 'assistant' | 'system',
-            content: m.content
-          }));
+            conversationHistory = history.reverse().map(m => ({
+              role: m.role as 'user' | 'assistant' | 'system',
+              content: m.content
+            }));
+          } catch (e) { console.error('Failed to fetch history', e); }
 
-          // Save User Message
-          await Message.create({
-            conversationId,
-            role: 'user',
-            content: userContent
-          });
-
-          // Update conversation timestamp
-          await Conversation.findByIdAndUpdate(conversationId, { updatedAt: new Date() });
+          // Save User Message (Fire and forget-ish, but await to ensure order if connection is good)
+          try {
+            await Message.create({
+              conversationId,
+              role: 'user',
+              content: userContent
+            });
+            await Conversation.findByIdAndUpdate(conversationId, { updatedAt: new Date() });
+          } catch (e) { console.error('Failed to save user message', e); }
         }
       } catch (e) {
-        console.error('DB Error during request setup:', e);
+        console.error('DB Error during request setup (proceeding with chat):', e);
+        // We continue without history if DB fails
       }
     }
 

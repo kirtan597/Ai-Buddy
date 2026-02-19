@@ -115,7 +115,7 @@ function ChatInterfaceContent() {
 
       {/* Desktop Sidebar */}
       <div className="hidden md:block w-80 border-r border-violet-200 dark:border-gray-700 flex-shrink-0">
-        <ChatSidebar />
+        <ChatSidebar onShowLogin={() => setShowLoginModal(true)} />
       </div>
 
       {/* Mobile Sidebar */}
@@ -129,7 +129,7 @@ function ChatInterfaceContent() {
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
             className="w-80 max-w-[85vw] border-r border-violet-200 dark:border-gray-700 fixed z-50 h-full md:hidden bg-white dark:bg-gray-900"
           >
-            <ChatSidebar />
+            <ChatSidebar onShowLogin={() => setShowLoginModal(true)} />
           </motion.div>
         )}
       </AnimatePresence>

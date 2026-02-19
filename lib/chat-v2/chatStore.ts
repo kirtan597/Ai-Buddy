@@ -110,12 +110,15 @@ export const useChatStore = create<ChatStateExtended & ChatActions>()(
         fetchMessages: async (sessionId) => {
           try {
             const res = await fetch(`/api/conversation/${sessionId}/messages`);
-            if (!res.ok) throw new Error('Failed to fetch messages');
+            if (!res.ok) {
+              // If API fails (e.g. DB offline), keep local state and valid "offline" usage
+              console.warn('Network/DB unavailable, using local history if available.');
+              return;
+            }
             const messages = await res.json();
 
             set((state) => {
               // Map backend messages to frontend format
-              // Assuming API returns array of messages
               const formattedMessages: Message[] = messages.map((m: any) => ({
                 id: m._id || m.id,
                 role: m.role,
@@ -136,7 +139,7 @@ export const useChatStore = create<ChatStateExtended & ChatActions>()(
               };
             });
           } catch (error) {
-            console.error('Error fetching messages:', error);
+            console.error('Error fetching messages (Offline mode):', error);
           }
         },
 

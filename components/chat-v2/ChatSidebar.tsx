@@ -5,14 +5,20 @@ import { useChatStore } from '@/lib/chat-v2/chatStore';
 import { useTheme } from './ThemeProvider';
 import { SessionMenu } from './SessionMenu';
 import { useLenisScroll } from '@/hooks/useLenisScroll';
-import { Plus, MessageSquare, Sun, Moon, Settings, Search, X } from 'lucide-react';
+import { SettingsModal } from './SettingsModal';
+import { Plus, MessageSquare, Sun, Moon, Settings, Search, X, User, LogOut, LogIn } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { useSession } from 'next-auth/react';
+import { useSession, signOut } from 'next-auth/react';
 
-export function ChatSidebar() {
+interface ChatSidebarProps {
+  onShowLogin: () => void;
+}
+
+export function ChatSidebar({ onShowLogin }: ChatSidebarProps) {
   const { sessions, currentSession, createSession, switchToSession, setSessions, fetchMessages } = useChatStore();
   const { theme, toggleTheme } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
+  const [showSettings, setShowSettings] = useState(false);
   const { data: session } = useSession();
 
   // Lenis smooth scrolling for session list
@@ -61,6 +67,11 @@ export function ChatSidebar() {
         console.error('Error creating new chat:', error);
       }
     } else {
+      // Guest logic: Limit to 1 chat
+      if (sessions.length > 0) {
+        onShowLogin();
+        return;
+      }
       createSession();
     }
   };
@@ -172,20 +183,17 @@ export function ChatSidebar() {
         </div>
       </div>
 
+      <SettingsModal
+        isOpen={showSettings}
+        onClose={() => setShowSettings(false)}
+        onShowLogin={onShowLogin}
+      />
+
       <div className="p-2 md:p-4 border-t border-violet-200 dark:border-gray-700 space-y-1 md:space-y-2">
         <motion.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
-          onClick={toggleTheme}
-          className="w-full flex items-center gap-2 md:gap-3 px-2 py-2 md:px-3 md:py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors text-xs md:text-sm touch-manipulation"
-        >
-          {theme === 'light' ? <Moon className="w-3 h-3 md:w-4 md:h-4" /> : <Sun className="w-3 h-3 md:w-4 md:h-4" />}
-          <span>{theme === 'light' ? 'Dark Mode' : 'Light Mode'}</span>
-        </motion.button>
-
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
+          onClick={() => setShowSettings(true)}
           className="w-full flex items-center gap-2 md:gap-3 px-2 py-2 md:px-3 md:py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors text-xs md:text-sm touch-manipulation"
         >
           <Settings className="w-3 h-3 md:w-4 md:h-4" />

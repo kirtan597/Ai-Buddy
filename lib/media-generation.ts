@@ -26,6 +26,7 @@ export async function generateImage(prompt: string): Promise<MediaGenerationResu
             body: JSON.stringify({
                 model: 'openai/gpt-5-image-mini',
                 messages: [{ role: 'user', content: prompt }],
+                max_tokens: 1000
             }),
         });
 
@@ -83,6 +84,7 @@ export async function generateVideo(prompt: string): Promise<MediaGenerationResu
             body: JSON.stringify({
                 model: 'luma/ray',
                 messages: [{ role: 'user', content: prompt }],
+                max_tokens: 1000
             }),
         });
 

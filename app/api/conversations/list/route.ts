@@ -28,6 +28,7 @@ export async function GET() {
         return NextResponse.json(conversations);
     } catch (error) {
         console.error('[CONVERSATIONS_GET]', error);
-        return new NextResponse('Internal Error', { status: 500 });
+        // Return empty array on DB failure to allow UI to load
+        return NextResponse.json([]);
     }
 }
