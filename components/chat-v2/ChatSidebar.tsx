@@ -40,6 +40,7 @@ export function ChatSidebar({ onShowLogin }: ChatSidebarProps) {
       try {
         const res = await fetch('/api/conversation/create', {
           method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ title: 'New Chat' }),
         });
 

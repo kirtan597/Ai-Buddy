@@ -61,7 +61,7 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
                             </p>
 
                             <button
-                                onClick={() => signIn('google')}
+                                onClick={() => signIn('google', { callbackUrl: window.location.origin })}
                                 className="w-full group relative flex items-center justify-center gap-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-violet-500 dark:hover:border-violet-500 hover:bg-violet-50 dark:hover:bg-gray-700/50 text-gray-700 dark:text-gray-200 font-medium py-3.5 px-6 rounded-xl transition-all duration-200 shadow-sm hover:shadow-md"
                             >
                                 <img
