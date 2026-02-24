@@ -7,6 +7,7 @@ import { InputBar } from './InputBar';
 import { ChatSidebar } from './ChatSidebar';
 import { ThemeProvider } from './ThemeProvider';
 import { Menu } from 'lucide-react';
+import { UserProfileDropdown } from '../UserProfileDropdown';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSession } from 'next-auth/react';
 import { LoginModal } from '../LoginModal';
@@ -157,12 +158,18 @@ function ChatInterfaceContent() {
               </div>
             </div>
 
-            {/* Status Indicator */}
-            <div className="flex items-center gap-1 md:gap-2 flex-shrink-0">
-              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-              <span className="text-xs md:text-sm text-green-600 dark:text-green-400 font-medium hidden sm:inline">
-                Online
-              </span>
+            {/* Right-side: Status + Profile Dropdown */}
+            <div className="flex items-center gap-2 md:gap-3 flex-shrink-0">
+              {/* Online dot */}
+              <div className="hidden sm:flex items-center gap-1.5">
+                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                <span className="text-xs text-green-600 dark:text-green-400 font-medium">Online</span>
+              </div>
+              {/* Profile */}
+              <UserProfileDropdown
+                variant="chat"
+                onShowLogin={() => setShowLoginModal(true)}
+              />
             </div>
           </div>
         </div>
