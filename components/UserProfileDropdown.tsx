@@ -4,51 +4,75 @@ import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSession, signOut, signIn } from 'next-auth/react';
 import {
-    User, LogOut, RefreshCcw, ChevronDown,
-    MessageSquare, Shield, Sparkles, CheckCircle,
-    ExternalLink
+    LogOut, RefreshCcw, ChevronDown,
+    MessageSquare, Sparkles, CheckCircle, LogIn,
 } from 'lucide-react';
 import { useChatStore } from '@/lib/chat-v2/chatStore';
 
 interface UserProfileDropdownProps {
     onShowLogin?: () => void;
-    /** variant controls where this appears: 'landing' (light bg) or 'chat' (dark sidebar) */
     variant?: 'landing' | 'chat';
 }
 
-export function UserProfileDropdown({
-    onShowLogin,
-    variant = 'landing',
-}: UserProfileDropdownProps) {
+export function UserProfileDropdown({ onShowLogin, variant = 'landing' }: UserProfileDropdownProps) {
     const { data: session, status } = useSession();
     const [open, setOpen] = useState(false);
     const [signingOut, setSigningOut] = useState(false);
-    const [switchingAccount, setSwitchingAccount] = useState(false);
-    const dropdownRef = useRef<HTMLDivElement>(null);
-    const { sessions } = useChatStore();
+    const [switching, setSwitching] = useState(false);
+    const triggerRef = useRef<HTMLButtonElement>(null);
+    const panelRef = useRef<HTMLDivElement>(null);
+    // Track the trigger's position so we can place the panel via fixed positioning
+    const [panelPos, setPanelPos] = useState({ top: 0, right: 0 });
 
-    // Close dropdown when clicking outside
+    const { sessions } = useChatStore();
+    const totalConversations = sessions.length;
+    const totalMessages = sessions.reduce((acc, s) => acc + s.messages.length, 0);
+
+    // Recalculate panel position whenever we open
+    const recalcPos = () => {
+        if (!triggerRef.current) return;
+        const rect = triggerRef.current.getBoundingClientRect();
+        const rightFromEdge = window.innerWidth - rect.right;
+        setPanelPos({ top: rect.bottom + 6, right: rightFromEdge });
+    };
+
+    const handleOpen = () => {
+        if (!open) recalcPos();
+        setOpen(v => !v);
+    };
+
+    // Close on outside click
     useEffect(() => {
-        const handler = (e: MouseEvent) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-                setOpen(false);
-            }
+        if (!open) return;
+        const handler = (e: MouseEvent | TouchEvent) => {
+            const target = e.target as Node;
+            if (
+                !triggerRef.current?.contains(target) &&
+                !panelRef.current?.contains(target)
+            ) setOpen(false);
         };
         document.addEventListener('mousedown', handler);
-        return () => document.removeEventListener('mousedown', handler);
-    }, []);
+        document.addEventListener('touchstart', handler);
+        return () => {
+            document.removeEventListener('mousedown', handler);
+            document.removeEventListener('touchstart', handler);
+        };
+    }, [open]);
 
     // Close on Escape
     useEffect(() => {
-        const handler = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') setOpen(false);
-        };
+        const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
         document.addEventListener('keydown', handler);
         return () => document.removeEventListener('keydown', handler);
     }, []);
 
-    const totalMessages = sessions.reduce((acc, s) => acc + s.messages.length, 0);
-    const totalConversations = sessions.length;
+    // Reposition if window resizes while open
+    useEffect(() => {
+        if (!open) return;
+        const handler = () => recalcPos();
+        window.addEventListener('resize', handler);
+        return () => window.removeEventListener('resize', handler);
+    }, [open]);
 
     const handleSignOut = async () => {
         setSigningOut(true);
@@ -57,263 +81,201 @@ export function UserProfileDropdown({
     };
 
     const handleSwitchAccount = async () => {
-        setSwitchingAccount(true);
+        setSwitching(true);
         setOpen(false);
-        // Sign out silently, then immediately trigger Google sign-in with account picker
         await signOut({ redirect: false });
         await signIn('google', {
             callbackUrl: window.location.origin,
             prompt: 'select_account',
-        });
+        } as any);
     };
 
-    // ─── Loading State ─────────────────────────────────────────────────────────
+    // ── Loading state ──────────────────────────────────────────────────────────
     if (status === 'loading') {
-        return (
-            <div className="flex items-center gap-2">
-                <div className="w-9 h-9 rounded-full bg-violet-200 dark:bg-violet-800 animate-pulse" />
-                <div className="hidden sm:block w-20 h-3 rounded bg-violet-200 dark:bg-violet-800 animate-pulse" />
-            </div>
-        );
+        return <div className="w-8 h-8 rounded-full bg-violet-100 dark:bg-gray-700 animate-pulse" />;
     }
 
-    // ─── Not Signed In ─────────────────────────────────────────────────────────
+    // ── Not signed in ──────────────────────────────────────────────────────────
     if (!session?.user) {
         return (
             <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+                whileHover={{ scale: 1.04 }}
+                whileTap={{ scale: 0.96 }}
                 onClick={onShowLogin}
-                className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-all duration-200 touch-manipulation shadow-sm
+                className={`flex items-center gap-1.5 text-sm font-medium rounded-full px-3 py-1.5 transition-all touch-manipulation
           ${variant === 'landing'
-                        ? 'bg-white/80 backdrop-blur-sm border border-violet-200 text-violet-700 hover:bg-violet-50'
-                        : 'bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700'
+                        ? 'bg-white/80 border border-violet-200 text-violet-700 hover:bg-violet-50 backdrop-blur-sm shadow-sm'
+                        : 'bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
                     }`}
             >
-                <User className="w-4 h-4" />
+                <LogIn className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Sign In</span>
             </motion.button>
         );
     }
 
-    // ─── Signed In ─────────────────────────────────────────────────────────────
+    // ── Signed in ──────────────────────────────────────────────────────────────
     const user = session.user;
     const initials = (user.name || user.email || 'U')
-        .split(' ')
-        .map((n) => n[0])
-        .join('')
-        .toUpperCase()
-        .substring(0, 2);
+        .split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
 
     return (
-        <div ref={dropdownRef} className="relative z-50">
-            {/* ── Trigger Button ── */}
+        <>
+            {/* ── Trigger button ── */}
             <motion.button
-                id="profile-dropdown-trigger"
+                ref={triggerRef}
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.97 }}
-                onClick={() => setOpen((v) => !v)}
-                className={`flex items-center gap-2 rounded-full pl-1 pr-3 py-1 transition-all duration-200 touch-manipulation border shadow-sm
-          ${variant === 'landing'
-                        ? 'bg-white/90 backdrop-blur-sm border-violet-200 hover:border-violet-400 hover:shadow-md'
-                        : 'bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700'
-                    }`}
+                onClick={handleOpen}
                 aria-expanded={open}
                 aria-haspopup="true"
+                className={`flex items-center gap-1.5 rounded-full pl-1 pr-2.5 py-1 transition-all touch-manipulation border
+          ${variant === 'landing'
+                        ? 'bg-white/90 border-violet-200 backdrop-blur-sm shadow-sm hover:shadow-md hover:border-violet-300'
+                        : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700'
+                    }`}
             >
-                {/* Avatar */}
                 {user.image ? (
                     <img
                         src={user.image}
-                        alt={user.name || 'Profile'}
+                        alt={user.name || 'me'}
                         referrerPolicy="no-referrer"
-                        className="w-8 h-8 rounded-full object-cover ring-2 ring-violet-300 dark:ring-violet-600"
+                        className="w-7 h-7 rounded-full object-cover ring-2 ring-violet-200 dark:ring-violet-700"
                     />
                 ) : (
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold ring-2 ring-violet-300">
+                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-white text-[11px] font-bold">
                         {initials}
                     </div>
                 )}
-
-                {/* Name */}
-                <span className={`text-xs font-semibold hidden sm:block max-w-[100px] truncate
-          ${variant === 'landing' ? 'text-gray-800' : 'text-gray-800 dark:text-white'}`}>
+                <span className={`text-xs font-semibold hidden sm:block max-w-[80px] truncate
+          ${variant === 'landing' ? 'text-gray-800' : 'text-gray-700 dark:text-gray-200'}`}>
                     {user.name?.split(' ')[0] || 'You'}
                 </span>
-
-                {/* Chevron */}
-                <motion.div
-                    animate={{ rotate: open ? 180 : 0 }}
-                    transition={{ duration: 0.2 }}
-                >
-                    <ChevronDown className={`w-3.5 h-3.5
-            ${variant === 'landing' ? 'text-gray-500' : 'text-gray-500 dark:text-gray-400'}`}
-                    />
-                </motion.div>
+                <motion.span animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.18 }}>
+                    <ChevronDown className="w-3 h-3 text-gray-400" />
+                </motion.span>
             </motion.button>
 
-            {/* ── Dropdown Panel ── */}
+            {/* ── Backdrop (only visible, no blur — keeps chat readable) ── */}
             <AnimatePresence>
                 {open && (
                     <motion.div
-                        id="profile-dropdown-panel"
-                        initial={{ opacity: 0, y: -8, scale: 0.96 }}
+                        key="backdrop"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.12 }}
+                        className="fixed inset-0 z-[199]"
+                        onClick={() => setOpen(false)}
+                    />
+                )}
+            </AnimatePresence>
+
+            {/* ── Dropdown panel — fixed positioned, escapes all overflow:hidden containers ── */}
+            <AnimatePresence>
+                {open && (
+                    <motion.div
+                        ref={panelRef}
+                        key="panel"
+                        initial={{ opacity: 0, y: -8, scale: 0.97 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: -8, scale: 0.96 }}
-                        transition={{ duration: 0.18, ease: 'easeOut' }}
-                        className="absolute right-0 top-full mt-2 w-80 bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-violet-100 dark:border-gray-800 overflow-hidden"
+                        exit={{ opacity: 0, y: -8, scale: 0.97 }}
+                        transition={{ duration: 0.15, ease: 'easeOut' }}
+                        style={{
+                            position: 'fixed',
+                            top: panelPos.top,
+                            right: panelPos.right,
+                            // Cap width so it fits on small phones
+                            width: Math.min(256, window.innerWidth - 16),
+                            zIndex: 200,
+                        }}
+                        className="bg-white dark:bg-gray-900 rounded-xl shadow-xl border border-gray-100 dark:border-gray-800 overflow-hidden"
                     >
-                        {/* ── Header ── */}
-                        <div className="relative px-5 pt-5 pb-4 bg-gradient-to-br from-violet-600 via-indigo-600 to-purple-700 overflow-hidden">
-                            {/* Decorative circles */}
-                            <div className="absolute -top-4 -right-4 w-24 h-24 rounded-full bg-white/10" />
-                            <div className="absolute -bottom-6 -left-6 w-32 h-32 rounded-full bg-white/5" />
-
-                            <div className="relative flex items-start gap-3">
-                                {/* Large Avatar */}
-                                {user.image ? (
-                                    <img
-                                        src={user.image}
-                                        alt={user.name || 'Profile'}
-                                        referrerPolicy="no-referrer"
-                                        className="w-14 h-14 rounded-2xl object-cover border-2 border-white/40 shadow-lg flex-shrink-0"
-                                    />
-                                ) : (
-                                    <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center text-white text-xl font-bold border-2 border-white/40 flex-shrink-0">
-                                        {initials}
-                                    </div>
-                                )}
-
-                                <div className="flex-1 min-w-0 pt-0.5">
-                                    <div className="flex items-center gap-1.5">
-                                        <p className="text-white font-bold text-base truncate">
-                                            {user.name || 'User'}
-                                        </p>
-                                        <span title="Verified Google Account">
-                                            <CheckCircle className="w-4 h-4 text-green-300 flex-shrink-0" />
-                                        </span>
-                                    </div>
-                                    <p className="text-violet-200 text-xs truncate mt-0.5">{user.email}</p>
-                                    <div className="flex items-center gap-1.5 mt-2">
-                                        <span className="inline-flex items-center gap-1 bg-white/20 backdrop-blur-sm rounded-full px-2 py-0.5 text-[10px] text-white font-medium">
-                                            <Sparkles className="w-2.5 h-2.5" />
-                                            Google Account
-                                        </span>
-                                        <span className="inline-flex items-center gap-1 bg-green-400/30 rounded-full px-2 py-0.5 text-[10px] text-green-200 font-medium">
-                                            <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-                                            Active
-                                        </span>
-                                    </div>
+                        {/* Profile row */}
+                        <div className="flex items-center gap-3 px-3 py-3 border-b border-gray-100 dark:border-gray-800">
+                            {user.image ? (
+                                <img
+                                    src={user.image}
+                                    alt={user.name || 'Profile'}
+                                    referrerPolicy="no-referrer"
+                                    className="w-9 h-9 rounded-full object-cover flex-shrink-0"
+                                />
+                            ) : (
+                                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                                    {initials}
                                 </div>
+                            )}
+                            <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-1">
+                                    <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                                        {user.name || 'User'}
+                                    </p>
+                                    <span title="Verified">
+                                        <CheckCircle className="w-3 h-3 text-green-500 flex-shrink-0" />
+                                    </span>
+                                </div>
+                                <p className="text-[11px] text-gray-400 dark:text-gray-500 truncate">{user.email}</p>
                             </div>
                         </div>
 
-                        {/* ── Stats Row ── */}
-                        <div className="grid grid-cols-2 divide-x divide-violet-100 dark:divide-gray-800 border-b border-violet-100 dark:border-gray-800">
-                            <div className="flex flex-col items-center py-3 gap-0.5">
-                                <div className="flex items-center gap-1.5">
-                                    <MessageSquare className="w-3.5 h-3.5 text-violet-500" />
-                                    <span className="text-lg font-bold text-gray-900 dark:text-white">
-                                        {totalConversations}
-                                    </span>
+                        {/* Stats */}
+                        <div className="grid grid-cols-2 divide-x divide-gray-100 dark:divide-gray-800 border-b border-gray-100 dark:border-gray-800">
+                            <div className="flex flex-col items-center py-2 gap-0.5">
+                                <div className="flex items-center gap-1">
+                                    <MessageSquare className="w-3 h-3 text-violet-400" />
+                                    <span className="text-sm font-bold text-gray-800 dark:text-white">{totalConversations}</span>
                                 </div>
-                                <span className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-wider">
-                                    Conversations
-                                </span>
+                                <span className="text-[9px] text-gray-400 uppercase tracking-wide">Chats</span>
                             </div>
-                            <div className="flex flex-col items-center py-3 gap-0.5">
-                                <div className="flex items-center gap-1.5">
-                                    <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
-                                    <span className="text-lg font-bold text-gray-900 dark:text-white">
-                                        {totalMessages}
-                                    </span>
+                            <div className="flex flex-col items-center py-2 gap-0.5">
+                                <div className="flex items-center gap-1">
+                                    <Sparkles className="w-3 h-3 text-indigo-400" />
+                                    <span className="text-sm font-bold text-gray-800 dark:text-white">{totalMessages}</span>
                                 </div>
-                                <span className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-wider">
-                                    Messages
-                                </span>
+                                <span className="text-[9px] text-gray-400 uppercase tracking-wide">Messages</span>
                             </div>
                         </div>
 
-                        {/* ── Menu Items ── */}
-                        <div className="p-2 space-y-1">
-
-                            {/* Account Protection info */}
-                            <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-green-50 dark:bg-green-900/10 border border-green-100 dark:border-green-900/20">
-                                <div className="w-8 h-8 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center flex-shrink-0">
-                                    <Shield className="w-4 h-4 text-green-600 dark:text-green-400" />
-                                </div>
-                                <div>
-                                    <p className="text-xs font-semibold text-green-700 dark:text-green-400">
-                                        Secure Session Active
-                                    </p>
-                                    <p className="text-[10px] text-green-600/70 dark:text-green-500/70">
-                                        Your data is encrypted & synced
-                                    </p>
-                                </div>
-                            </div>
-
-                            {/* Divider */}
-                            <div className="pt-1 pb-0.5">
-                                <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-600 uppercase tracking-wider px-3 mb-1">
-                                    Account Actions
-                                </p>
-                            </div>
-
-                            {/* Switch Account */}
-                            <motion.button
-                                id="switch-account-btn"
-                                whileHover={{ backgroundColor: 'rgba(139,92,246,0.06)' }}
-                                whileTap={{ scale: 0.98 }}
+                        {/* Actions */}
+                        <div className="p-1">
+                            <button
                                 onClick={handleSwitchAccount}
-                                disabled={switchingAccount}
-                                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-colors group touch-manipulation disabled:opacity-60"
+                                disabled={switching}
+                                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-left hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group disabled:opacity-60 touch-manipulation"
                             >
-                                <div className="w-8 h-8 rounded-lg bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center flex-shrink-0 group-hover:bg-violet-200 dark:group-hover:bg-violet-800/40 transition-colors">
-                                    <RefreshCcw className={`w-4 h-4 text-violet-600 dark:text-violet-400 ${switchingAccount ? 'animate-spin' : ''}`} />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
-                                        {switchingAccount ? 'Switching…' : 'Switch Account'}
+                                <RefreshCcw className={`w-3.5 h-3.5 text-gray-400 group-hover:text-violet-500 transition-colors flex-shrink-0 ${switching ? 'animate-spin' : ''}`} />
+                                <div>
+                                    <p className="text-xs font-medium text-gray-700 dark:text-gray-200">
+                                        {switching ? 'Switching…' : 'Switch Account'}
                                     </p>
-                                    <p className="text-[10px] text-gray-400 dark:text-gray-500">
-                                        Sign in with a different Google account
-                                    </p>
+                                    <p className="text-[10px] text-gray-400 dark:text-gray-500">Different Google account</p>
                                 </div>
-                                <ExternalLink className="w-3.5 h-3.5 text-gray-300 dark:text-gray-600 flex-shrink-0" />
-                            </motion.button>
+                            </button>
 
-                            {/* Sign Out */}
-                            <motion.button
-                                id="sign-out-btn"
-                                whileHover={{ backgroundColor: 'rgba(239,68,68,0.06)' }}
-                                whileTap={{ scale: 0.98 }}
+                            <button
                                 onClick={handleSignOut}
                                 disabled={signingOut}
-                                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-colors group touch-manipulation disabled:opacity-60"
+                                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-left hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors group disabled:opacity-60 touch-manipulation"
                             >
-                                <div className="w-8 h-8 rounded-lg bg-red-50 dark:bg-red-900/20 flex items-center justify-center flex-shrink-0 group-hover:bg-red-100 dark:group-hover:bg-red-900/30 transition-colors">
-                                    <LogOut className={`w-4 h-4 text-red-500 ${signingOut ? 'animate-pulse' : ''}`} />
-                                </div>
+                                <LogOut className={`w-3.5 h-3.5 text-gray-400 group-hover:text-red-500 transition-colors flex-shrink-0 ${signingOut ? 'animate-pulse' : ''}`} />
                                 <div>
-                                    <p className="text-sm font-medium text-red-600 dark:text-red-400">
+                                    <p className="text-xs font-medium text-gray-700 dark:text-gray-200 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors">
                                         {signingOut ? 'Signing out…' : 'Sign Out'}
                                     </p>
-                                    <p className="text-[10px] text-gray-400 dark:text-gray-500">
-                                        End your session on this device
-                                    </p>
+                                    <p className="text-[10px] text-gray-400 dark:text-gray-500">End session on this device</p>
                                 </div>
-                            </motion.button>
+                            </button>
                         </div>
 
-                        {/* ── Footer ── */}
-                        <div className="px-4 py-3 border-t border-violet-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-950/30">
-                            <p className="text-[10px] text-center text-gray-400 dark:text-gray-600">
-                                AI Buddy v2.0 · Your data is stored securely in MongoDB Atlas
+                        {/* Footer */}
+                        <div className="px-3 py-2 border-t border-gray-100 dark:border-gray-800">
+                            <p className="text-[9px] text-center text-gray-300 dark:text-gray-700">
+                                AI Buddy v2.0 · Synced with MongoDB
                             </p>
                         </div>
                     </motion.div>
                 )}
             </AnimatePresence>
-        </div>
+        </>
     );
 }

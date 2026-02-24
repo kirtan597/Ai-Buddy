@@ -90,71 +90,63 @@ export function SettingsModal({ isOpen, onClose, onShowLogin }: SettingsModalPro
                                 <div className="space-y-3">
                                     <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Account</h3>
 
-                                    {/* Profile Card */}
-                                    <div className="rounded-2xl overflow-hidden border border-violet-100 dark:border-gray-800">
-                                        {/* Gradient Header */}
-                                        <div className="relative px-4 pt-4 pb-10 bg-gradient-to-br from-violet-600 via-indigo-600 to-purple-700">
-                                            <div className="absolute -top-3 -right-3 w-20 h-20 rounded-full bg-white/10" />
-                                            <div className="flex items-center gap-3">
-                                                {user.image ? (
-                                                    <img
-                                                        src={user.image}
-                                                        alt={user.name || 'Profile'}
-                                                        referrerPolicy="no-referrer"
-                                                        className="w-14 h-14 rounded-2xl border-2 border-white/40 shadow-lg flex-shrink-0 object-cover"
-                                                    />
-                                                ) : (
-                                                    <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center text-white text-xl font-bold border-2 border-white/40 flex-shrink-0">
-                                                        {initials}
-                                                    </div>
-                                                )}
-                                                <div className="min-w-0">
-                                                    <div className="flex items-center gap-1.5">
-                                                        <p className="text-white font-bold text-base truncate">{user.name || 'User'}</p>
-                                                        <CheckCircle className="w-4 h-4 text-green-300 flex-shrink-0" />
-                                                    </div>
-                                                    <p className="text-violet-200 text-xs truncate">{user.email}</p>
-                                                    <div className="flex items-center gap-1.5 mt-1.5">
-                                                        <span className="inline-flex items-center gap-1 bg-white/20 rounded-full px-2 py-0.5 text-[10px] text-white font-medium">
-                                                            <Sparkles className="w-2.5 h-2.5" />
-                                                            Google Account
-                                                        </span>
-                                                        <span className="inline-flex items-center gap-1 bg-green-400/30 rounded-full px-2 py-0.5 text-[10px] text-green-200 font-medium">
-                                                            <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-                                                            Active
-                                                        </span>
-                                                    </div>
+                                    {/* Profile Card — clean flat style */}
+                                    <div className="rounded-xl border border-gray-100 dark:border-gray-800 overflow-hidden">
+                                        {/* Top: Avatar + info */}
+                                        <div className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-800/50">
+                                            {user.image ? (
+                                                <img
+                                                    src={user.image}
+                                                    alt={user.name || 'Profile'}
+                                                    referrerPolicy="no-referrer"
+                                                    className="w-12 h-12 rounded-full object-cover flex-shrink-0 ring-2 ring-violet-200 dark:ring-violet-700"
+                                                />
+                                            ) : (
+                                                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-white text-base font-bold flex-shrink-0">
+                                                    {initials}
                                                 </div>
+                                            )}
+                                            <div className="min-w-0 flex-1">
+                                                <div className="flex items-center gap-1.5">
+                                                    <p className="font-semibold text-gray-900 dark:text-white truncate">{user.name || 'User'}</p>
+                                                    <span title="Verified Google Account">
+                                                        <CheckCircle className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
+                                                    </span>
+                                                </div>
+                                                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user.email}</p>
+                                                <span className="inline-flex items-center gap-1 mt-1 bg-violet-100 dark:bg-violet-900/30 rounded-full px-2 py-0.5 text-[10px] text-violet-600 dark:text-violet-400 font-medium">
+                                                    <Sparkles className="w-2.5 h-2.5" />
+                                                    Google Account
+                                                </span>
                                             </div>
                                         </div>
 
                                         {/* Stats */}
-                                        <div className="grid grid-cols-2 divide-x divide-violet-100 dark:divide-gray-800 -mt-6 relative z-10 mx-3 bg-white dark:bg-gray-900 rounded-xl border border-violet-100 dark:border-gray-800 shadow-sm">
+                                        <div className="grid grid-cols-2 divide-x divide-gray-100 dark:divide-gray-800 border-t border-gray-100 dark:border-gray-800">
                                             <div className="flex flex-col items-center py-3 gap-0.5">
                                                 <div className="flex items-center gap-1.5">
                                                     <MessageSquare className="w-3.5 h-3.5 text-violet-500" />
-                                                    <span className="text-lg font-bold text-gray-900 dark:text-white">{totalConversations}</span>
+                                                    <span className="text-base font-bold text-gray-900 dark:text-white">{totalConversations}</span>
                                                 </div>
-                                                <span className="text-[10px] text-gray-400 uppercase tracking-wider">Conversations</span>
+                                                <span className="text-[10px] text-gray-400 uppercase tracking-wide">Conversations</span>
                                             </div>
                                             <div className="flex flex-col items-center py-3 gap-0.5">
                                                 <div className="flex items-center gap-1.5">
                                                     <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
-                                                    <span className="text-lg font-bold text-gray-900 dark:text-white">{totalMessages}</span>
+                                                    <span className="text-base font-bold text-gray-900 dark:text-white">{totalMessages}</span>
                                                 </div>
-                                                <span className="text-[10px] text-gray-400 uppercase tracking-wider">Messages</span>
+                                                <span className="text-[10px] text-gray-400 uppercase tracking-wide">Messages</span>
                                             </div>
                                         </div>
-
-                                        {/* Secure badge */}
-                                        <div className="mx-3 mt-2 mb-3 flex items-center gap-3 px-3 py-2 rounded-xl bg-green-50 dark:bg-green-900/10 border border-green-100 dark:border-green-900/20">
-                                            <div className="w-7 h-7 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center flex-shrink-0">
-                                                <Shield className="w-3.5 h-3.5 text-green-600 dark:text-green-400" />
-                                            </div>
-                                            <div>
-                                                <p className="text-xs font-semibold text-green-700 dark:text-green-400">Secure Session Active</p>
-                                                <p className="text-[10px] text-green-600/70 dark:text-green-500/70">Your data is encrypted & synced to MongoDB</p>
-                                            </div>
+                                    </div>
+                                    {/* Secure badge */}
+                                    <div className="mx-3 mt-2 mb-3 flex items-center gap-3 px-3 py-2 rounded-xl bg-green-50 dark:bg-green-900/10 border border-green-100 dark:border-green-900/20">
+                                        <div className="w-7 h-7 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center flex-shrink-0">
+                                            <Shield className="w-3.5 h-3.5 text-green-600 dark:text-green-400" />
+                                        </div>
+                                        <div>
+                                            <p className="text-xs font-semibold text-green-700 dark:text-green-400">Secure Session Active</p>
+                                            <p className="text-[10px] text-green-600/70 dark:text-green-500/70">Your data is encrypted & synced to MongoDB</p>
                                         </div>
                                     </div>
 
