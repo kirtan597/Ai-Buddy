@@ -7,7 +7,8 @@ const nextConfig: NextConfig = {
         'localhost:3000',
         '*.nip.io:3000',
         '*.nip.io',
-        // Add your local network IP here if testing on mobile, e.g. 'http://192.168.x.x:3000'
+        'kbotai.netlify.app',
+        '*.netlify.app',
       ],
     },
   },
@@ -22,8 +23,18 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: '**.googleusercontent.com',
       },
+      {
+        // OpenRouter / Cloudflare generated image URLs
+        protocol: 'https',
+        hostname: '**.openrouter.ai',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.cloudflare.com',
+      },
     ],
   },
 };
 
 export default nextConfig;
+

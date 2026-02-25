@@ -80,11 +80,13 @@ export async function POST(request: NextRequest) {
     const session = await getServerSession(authOptions);
 
     // Configure OpenAI client for OpenRouter
+    // Use NEXTAUTH_URL as the site URL so OpenRouter allows requests from production
+    const siteUrl = process.env.NEXTAUTH_URL || 'https://kbotai.netlify.app';
     const openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
       baseURL: 'https://openrouter.ai/api/v1',
       defaultHeaders: {
-        'HTTP-Referer': 'http://localhost:3000',
+        'HTTP-Referer': siteUrl,
         'X-Title': 'Ai Buddy Chat',
       },
     });

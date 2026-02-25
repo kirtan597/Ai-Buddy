@@ -32,7 +32,7 @@ export async function generateImage(prompt: string): Promise<MediaGenerationResu
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${apiKey}`,
-                'HTTP-Referer': 'http://localhost:3000',
+                'HTTP-Referer': process.env.NEXTAUTH_URL || 'https://kbotai.netlify.app',
                 'X-Title': 'Ai Buddy Media',
                 'Content-Type': 'application/json',
             },
@@ -125,7 +125,7 @@ export async function generateVideo(prompt: string): Promise<MediaGenerationResu
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${apiKey}`,
-                'HTTP-Referer': 'http://localhost:3000',
+                'HTTP-Referer': process.env.NEXTAUTH_URL || 'https://kbotai.netlify.app',
                 'X-Title': 'Ai Buddy Media',
                 'Content-Type': 'application/json',
             },
