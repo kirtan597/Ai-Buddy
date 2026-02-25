@@ -5,6 +5,8 @@ import dbConnect from '@/lib/mongodb';
 import Conversation from '@/models/Conversation';
 import User from '@/models/User';
 
+export const maxDuration = 30;
+
 export async function GET() {
     try {
         const session = await getServerSession(authOptions);

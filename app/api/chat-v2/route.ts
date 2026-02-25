@@ -8,6 +8,9 @@ import Conversation from '@/models/Conversation';
 import Message from '@/models/Message';
 import User from '@/models/User';
 
+// Increase max execution time for Netlify serverless functions (streaming needs more time)
+export const maxDuration = 60; // seconds
+
 // Tool definitions
 const tools: OpenAI.Chat.Completions.ChatCompletionTool[] = [
   {
@@ -70,9 +73,12 @@ Always format your responses using clean, well-structured Markdown:
 
 export async function POST(request: NextRequest) {
   try {
-    if (!process.env.OPENAI_API_KEY) {
+    // Support OPENAI_API_KEY or OPENROUTER_API_KEY as alias
+    const apiKey = process.env.OPENAI_API_KEY || process.env.OPENROUTER_API_KEY;
+    if (!apiKey) {
+      console.error('[chat-v2] Missing API key. Set OPENAI_API_KEY in environment variables.');
       return new Response(
-        JSON.stringify({ error: 'OpenAI API key not configured' }),
+        JSON.stringify({ error: 'API key not configured. Check OPENAI_API_KEY environment variable.' }),
         { status: 500, headers: { 'Content-Type': 'application/json' } }
       );
     }
@@ -83,7 +89,7 @@ export async function POST(request: NextRequest) {
     // Use NEXTAUTH_URL as the site URL so OpenRouter allows requests from production
     const siteUrl = process.env.NEXTAUTH_URL || 'https://kbotai.netlify.app';
     const openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
+      apiKey,
       baseURL: 'https://openrouter.ai/api/v1',
       defaultHeaders: {
         'HTTP-Referer': siteUrl,

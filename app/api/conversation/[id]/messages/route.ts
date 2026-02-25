@@ -6,6 +6,8 @@ import Conversation from '@/models/Conversation';
 import Message from '@/models/Message';
 import User from '@/models/User';
 
+export const maxDuration = 30;
+
 export async function GET(
     req: Request,
     { params }: { params: Promise<{ id: string }> } // Params are a Promise in Next.js 15+ (and 16)
