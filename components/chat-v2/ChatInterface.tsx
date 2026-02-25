@@ -7,7 +7,6 @@ import { InputBar } from './InputBar';
 import { ChatSidebar } from './ChatSidebar';
 import { ThemeProvider } from './ThemeProvider';
 import { Menu } from 'lucide-react';
-import { UserProfileDropdown } from '../UserProfileDropdown';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSession } from 'next-auth/react';
 import { LoginModal } from '../LoginModal';
@@ -97,7 +96,9 @@ function ChatInterfaceContent() {
   }, [sidebarOpen, isMobile]);
 
   return (
-    <div className="h-[100dvh] bg-gradient-to-br from-violet-50 via-purple-50 to-indigo-50 dark:from-gray-900 dark:via-purple-900/20 dark:to-indigo-900/20 flex relative overflow-hidden">
+    <div className="h-[100dvh] bg-gradient-to-br from-violet-50 via-purple-50 to-indigo-50 dark:from-gray-900 dark:via-purple-900/20 dark:to-indigo-900/20 flex relative overflow-hidden"
+      style={{ paddingTop: 'env(safe-area-inset-top)' }}
+    >
 
       <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} />
 
@@ -137,39 +138,25 @@ function ChatInterfaceContent() {
 
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col min-w-0 relative">
-        {/* Header - Optimized for Mobile */}
-        <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border-b border-violet-200 dark:border-gray-700 px-3 py-3 md:px-4 md:py-4 flex-shrink-0">
+        {/* Header - Compact Mobile */}
+        <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-violet-200 dark:border-gray-700 px-3 py-2.5 md:px-4 md:py-3.5 flex-shrink-0">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
               {/* Mobile Menu Button */}
               <motion.button
-                whileTap={{ scale: 0.95 }}
+                whileTap={{ scale: 0.92 }}
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="md:hidden p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors touch-manipulation"
+                className="md:hidden flex-shrink-0 p-2 -ml-1 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors touch-manipulation"
                 aria-label="Toggle sidebar"
               >
                 <Menu className="w-5 h-5" />
               </motion.button>
 
               <div className="min-w-0 flex-1">
-                <h1 className="text-lg md:text-xl lg:text-2xl font-bold bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent truncate">
+                <h1 className="text-base md:text-xl font-bold bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent truncate leading-tight">
                   AI Buddy
                 </h1>
               </div>
-            </div>
-
-            {/* Right-side: Status + Profile Dropdown */}
-            <div className="flex items-center gap-2 md:gap-3 flex-shrink-0">
-              {/* Online dot */}
-              <div className="hidden sm:flex items-center gap-1.5">
-                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                <span className="text-xs text-green-600 dark:text-green-400 font-medium">Online</span>
-              </div>
-              {/* Profile */}
-              <UserProfileDropdown
-                variant="chat"
-                onShowLogin={() => setShowLoginModal(true)}
-              />
             </div>
           </div>
         </div>

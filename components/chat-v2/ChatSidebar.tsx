@@ -6,8 +6,8 @@ import { useTheme } from './ThemeProvider';
 import { SessionMenu } from './SessionMenu';
 import { useLenisScroll } from '@/hooks/useLenisScroll';
 import { SettingsModal } from './SettingsModal';
-import { Plus, MessageSquare, Sun, Moon, Settings, Search, X, User, LogOut, LogIn } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Plus, MessageSquare, Sun, Moon, Settings, Search, X, User, LogOut, LogIn, ChevronUp } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useSession, signOut } from 'next-auth/react';
 
 interface ChatSidebarProps {
@@ -19,6 +19,7 @@ export function ChatSidebar({ onShowLogin }: ChatSidebarProps) {
   const { theme, toggleTheme } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
   const [showSettings, setShowSettings] = useState(false);
+  const [showAccount, setShowAccount] = useState(false);
   const { data: session } = useSession();
 
   // Lenis smooth scrolling for session list
@@ -190,16 +191,123 @@ export function ChatSidebar({ onShowLogin }: ChatSidebarProps) {
         onShowLogin={onShowLogin}
       />
 
-      <div className="p-2 md:p-4 border-t border-violet-200 dark:border-gray-700 space-y-1 md:space-y-2">
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={() => setShowSettings(true)}
-          className="w-full flex items-center gap-2 md:gap-3 px-2 py-2 md:px-3 md:py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors text-xs md:text-sm touch-manipulation"
-        >
-          <Settings className="w-3 h-3 md:w-4 md:h-4" />
-          <span>Settings</span>
-        </motion.button>
+      {/* ── Bottom toolbar: Settings + Account ── */}
+      <div className="border-t border-violet-200 dark:border-gray-700">
+
+        {/* Settings button */}
+        <div className="px-2 pt-2 md:px-4 md:pt-3">
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => setShowSettings(true)}
+            className="w-full flex items-center gap-2 md:gap-3 px-2 py-2 md:px-3 md:py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors text-xs md:text-sm touch-manipulation"
+          >
+            <Settings className="w-3 h-3 md:w-4 md:h-4" />
+            <span>Settings</span>
+          </motion.button>
+        </div>
+
+        {/* Account row — always visible, expands on click */}
+        <div className="px-2 pb-2 md:px-4 md:pb-3 pt-1">
+
+          {/* Trigger row */}
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => session?.user ? setShowAccount(v => !v) : onShowLogin()}
+            className="w-full flex items-center gap-2 md:gap-3 px-2 py-2 md:px-3 md:py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors touch-manipulation"
+          >
+            {/* Avatar */}
+            {session?.user ? (
+              session.user.image ? (
+                <img
+                  src={session.user.image}
+                  alt={session.user.name || 'Profile'}
+                  referrerPolicy="no-referrer"
+                  className="w-6 h-6 md:w-7 md:h-7 rounded-full object-cover ring-2 ring-violet-300 dark:ring-violet-600 flex-shrink-0"
+                />
+              ) : (
+                <div className="w-6 h-6 md:w-7 md:h-7 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0">
+                  {(session.user.name || session.user.email || 'U').split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)}
+                </div>
+              )
+            ) : (
+              <div className="w-6 h-6 md:w-7 md:h-7 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
+                <User className="w-3 h-3 text-gray-400" />
+              </div>
+            )}
+
+            {/* Name / Guest label */}
+            <div className="flex-1 min-w-0 text-left">
+              <p className="text-xs md:text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
+                {session?.user ? (session.user.name?.split(' ')[0] || 'Account') : 'Guest'}
+              </p>
+              <p className="text-[10px] text-gray-400 dark:text-gray-500 truncate">
+                {session?.user ? session.user.email : 'Not signed in'}
+              </p>
+            </div>
+
+            {/* Arrow */}
+            {session?.user && (
+              <motion.span
+                animate={{ rotate: showAccount ? 0 : 180 }}
+                transition={{ duration: 0.2 }}
+              >
+                <ChevronUp className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+              </motion.span>
+            )}
+            {!session?.user && (
+              <LogIn className="w-3.5 h-3.5 text-violet-500 flex-shrink-0" />
+            )}
+          </motion.button>
+
+          {/* Expanded account panel */}
+          <AnimatePresence>
+            {showAccount && session?.user && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.2, ease: 'easeInOut' }}
+                className="overflow-hidden"
+              >
+                <div className="mt-1 rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 overflow-hidden">
+
+                  {/* Account info */}
+                  <div className="flex items-center gap-3 px-3 py-2.5 border-b border-gray-200 dark:border-gray-700">
+                    {session.user.image ? (
+                      <img
+                        src={session.user.image}
+                        alt={session.user.name || 'Profile'}
+                        referrerPolicy="no-referrer"
+                        className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+                      />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                        {(session.user.name || session.user.email || 'U').split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)}
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-semibold text-gray-900 dark:text-white truncate">{session.user.name || 'User'}</p>
+                      <p className="text-[10px] text-gray-400 dark:text-gray-500 truncate">{session.user.email}</p>
+                    </div>
+                  </div>
+
+                  {/* Sign out */}
+                  <button
+                    onClick={() => signOut({ callbackUrl: window.location.origin })}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors group touch-manipulation"
+                  >
+                    <LogOut className="w-3.5 h-3.5 text-gray-400 group-hover:text-red-500 transition-colors flex-shrink-0" />
+                    <span className="text-xs font-medium text-gray-700 dark:text-gray-300 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors">
+                      Sign Out
+                    </span>
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
     </div>
   );

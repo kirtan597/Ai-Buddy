@@ -119,15 +119,32 @@
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }
-  
+
   /* Optimize scroll performance */
   html {
-    scroll-behavior: auto !important; /* Let Lenis handle smooth scrolling */
+    scroll-behavior: auto !important;
+    /* Let Lenis handle smooth scrolling */
+    /* Lock html to viewport — prevents iOS address-bar resize jank */
+    height: -webkit-fill-available;
+    overflow: hidden;
   }
-  
+
+  body {
+    overscroll-behavior: none;
+    /* No pull-to-refresh / bounce */
+    overflow: hidden;
+    min-height: 100dvh;
+    min-height: -webkit-fill-available;
+    /* Prevent text size adjustment on orientation change */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+
   /* Improve rendering performance */
   .lenis-parallax,
   .lenis-fade-in {
@@ -135,42 +152,47 @@
     backface-visibility: hidden;
     perspective: 1000px;
   }
-  
+
   /* Mobile optimizations */
   @media (max-width: 768px) {
+
     /* Prevent zoom on input focus for iOS */
-    input, textarea, select {
+    input,
+    textarea,
+    select {
       font-size: 16px !important;
     }
-    
+
     /* Improve touch targets */
-    button, [role="button"] {
+    button,
+    [role="button"] {
       min-height: 44px;
       min-width: 44px;
     }
-    
+
     /* Optimize scrolling on mobile */
     .mobile-scroll {
       -webkit-overflow-scrolling: touch;
       overscroll-behavior: contain;
     }
-    
+
     /* Reduce motion for better performance */
     * {
       animation-duration: 0.2s !important;
       transition-duration: 0.2s !important;
     }
   }
-  
+
   /* Android-specific optimizations */
   @media screen and (max-width: 768px) and (-webkit-min-device-pixel-ratio: 1) {
+
     /* Improve text rendering on Android */
     body {
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
       text-rendering: optimizeLegibility;
     }
-    
+
     /* Optimize touch interactions */
     * {
       -webkit-tap-highlight-color: transparent;
@@ -178,37 +200,39 @@
       -webkit-user-select: none;
       user-select: none;
     }
-    
+
     /* Allow text selection in input areas */
-    input, textarea, [contenteditable] {
+    input,
+    textarea,
+    [contenteditable] {
       -webkit-user-select: text;
       user-select: text;
     }
   }
-  
+
   /* Reduce motion for accessibility */
   @media (prefers-reduced-motion: reduce) {
     .lenis-fade-in {
       transition: none !important;
     }
-    
+
     .lenis {
       scroll-behavior: auto !important;
     }
-    
+
     * {
       animation-duration: 0.01ms !important;
       animation-iteration-count: 1 !important;
       transition-duration: 0.01ms !important;
     }
   }
-  
+
   /* High contrast mode support */
   @media (prefers-contrast: high) {
     .bg-white\/80 {
       background-color: white !important;
     }
-    
+
     .dark .bg-gray-800\/80 {
       background-color: rgb(31 41 55) !important;
     }
@@ -216,13 +240,23 @@
 }
 
 @keyframes scanline {
-  0% { background-position: 0% 0%; }
-  100% { background-position: 0% 100%; }
+  0% {
+    background-position: 0% 0%;
+  }
+
+  100% {
+    background-position: 0% 100%;
+  }
 }
 
 @keyframes shine {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
 }
 
 .animate-scanline {
@@ -236,6 +270,7 @@
 .scrollbar-none::-webkit-scrollbar {
   display: none;
 }
+
 .scrollbar-none {
   -ms-overflow-style: none;
   scrollbar-width: none;
@@ -296,7 +331,8 @@
 /* Android Chrome address bar compensation */
 .mobile-vh {
   height: 100vh;
-  height: 100dvh; /* Dynamic viewport height */
+  height: 100dvh;
+  /* Dynamic viewport height */
 }
 
 /* Improved button styles for mobile */
@@ -311,4 +347,34 @@
 .mobile-focus:focus {
   outline: 2px solid rgb(139 92 246);
   outline-offset: 2px;
+}
+
+/* ── AI response markdown base ─────────────────────────────────────────────── */
+.prose-ai {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.prose-ai>*:first-child {
+  margin-top: 0 !important;
+}
+
+.prose-ai>*:last-child {
+  margin-bottom: 0 !important;
+}
+
+/* Ordered list counter */
+.prose-ai ol {
+  counter-reset: list-item;
+}
+
+.prose-ai ol>li {
+  counter-increment: list-item;
+}
+
+.prose-ai ol>li::before {
+  content: none;
+  /* handled by React component */
 }

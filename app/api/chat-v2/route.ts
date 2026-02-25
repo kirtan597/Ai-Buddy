@@ -46,6 +46,28 @@ const tools: OpenAI.Chat.Completions.ChatCompletionTool[] = [
   },
 ];
 
+const SYSTEM_PROMPT = `You are AI Buddy, a knowledgeable, friendly, and highly capable AI assistant.
+
+## Response Formatting Rules
+Always format your responses using clean, well-structured Markdown:
+
+- **Headings**: Use ## for major sections, ### for sub-sections. Never use H1 in responses.
+- **Lists**: Use bullet points (-) for unordered items, numbered lists (1.) for steps or ranked items.
+- **Code**: Always wrap code in fenced code blocks with the correct language tag (e.g. \`\`\`python, \`\`\`javascript, \`\`\`bash). Never use plain text for code.
+- **Inline code**: Use backticks for \`variable names\`, \`function names\`, \`commands\`, and \`file paths\`.
+- **Bold**: Use **bold** for key terms, important concepts, and emphasis.
+- **Italic**: Use *italic* for definitions, titles, and secondary emphasis.
+- **Tables**: Use Markdown tables when presenting comparative or structured data.
+- **Blockquotes**: Use > for notes, warnings, tips, or quoting source material.
+- **Conciseness**: Be precise and comprehensive. Avoid padding or over-explanation.
+- **Step-by-step**: For instructions or how-to questions, always use numbered steps.
+
+## Tone & Personality
+- Be helpful, clear, and confident — like a senior engineer and mentor.
+- Match the depth of the answer to the complexity of the question.
+- If a question is ambiguous, answer the most likely interpretation and mention alternatives.
+- When generating images or videos, describe what you are creating before using the tool.`;
+
 export async function POST(request: NextRequest) {
   try {
     if (!process.env.OPENAI_API_KEY) {
@@ -86,7 +108,6 @@ export async function POST(request: NextRequest) {
       userContent = `${fileInfo} ${userContent}`;
     }
 
-
     // DB Operations: Verify User & Persist Message (Best Effort)
     let userId = null;
     let conversationHistory: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [];
@@ -124,7 +145,7 @@ export async function POST(request: NextRequest) {
             }));
           } catch (e) { console.error('Failed to fetch history', e); }
 
-          // Save User Message (Fire and forget-ish, but await to ensure order if connection is good)
+          // Save User Message
           try {
             await Message.create({
               conversationId,
@@ -136,7 +157,6 @@ export async function POST(request: NextRequest) {
         }
       } catch (e) {
         console.error('DB Error during request setup (proceeding with chat):', e);
-        // We continue without history if DB fails
       }
     }
 
@@ -144,7 +164,7 @@ export async function POST(request: NextRequest) {
     const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
       {
         role: 'system',
-        content: 'You are AI Buddy, a helpful and friendly AI assistant. You can generate images and videos using the available tools. When a tool returns a URL, present it clearly to the user.'
+        content: SYSTEM_PROMPT,
       },
       ...conversationHistory,
       {
@@ -169,8 +189,8 @@ export async function POST(request: NextRequest) {
     const readableStream = new ReadableStream({
       async start(controller) {
         let currentToolCall: any = null;
-        let toolCallArguments = "";
-        let fullResponseContent = ""; // Track full response for DB
+        let toolCallArguments = '';
+        let fullResponseContent = ''; // Track full response for DB
 
         try {
           for await (const chunk of stream) {
@@ -179,12 +199,12 @@ export async function POST(request: NextRequest) {
             if (toolCall) {
               if (toolCall.id) {
                 currentToolCall = toolCall;
-                toolCallArguments = ""; // Reset args for new call
+                toolCallArguments = '';
               }
               if (toolCall.function?.arguments) {
                 toolCallArguments += toolCall.function.arguments;
               }
-              continue; // Don't stream tool call bits to user as text
+              continue;
             }
 
             // Handle Normal Content
@@ -203,11 +223,10 @@ export async function POST(request: NextRequest) {
             try {
               args = JSON.parse(toolCallArguments);
             } catch (e) {
-              console.error("Failed to parse tool arguments", e);
+              console.error('Failed to parse tool arguments', e);
             }
 
             if (args && functionName) {
-              // Notify user we are generating
               const statusMsg = JSON.stringify({ content: `\n\n*Generating ${functionName === 'generate_image' ? 'image' : 'video'}...*\n\n` });
               controller.enqueue(encoder.encode(`data: ${statusMsg}\n\n`));
 
@@ -220,12 +239,11 @@ export async function POST(request: NextRequest) {
               }
 
               if (result) {
-                let markdown = "";
+                let markdown = '';
                 if (result.error) {
                   markdown = `\n> **Generation Failed**: ${result.error}\n`;
                 } else if (result.url) {
                   if (functionName === 'generate_video') {
-                    // Use video tag or simple link for video
                     markdown = `\n\n<video controls width="100%" src="${result.url}"></video>\n\n[Download Video](${result.url})`;
                   } else {
                     markdown = `\n\n![Generated Image](${result.url})\n\n`;

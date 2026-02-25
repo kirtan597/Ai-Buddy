@@ -12,6 +12,7 @@ interface ChatActions {
   deleteSession: (sessionId: string) => void;
   addMessage: (message: Omit<Message, 'id' | 'timestamp'>) => void;
   updateMessage: (id: string, updates: Partial<Message>) => void;
+  updateStreamingMessage: (id: string, content: string) => void;
   clearCurrentSession: () => void;
   setStreaming: (isStreaming: boolean) => void;
   setUploading: (isUploading: boolean) => void;
@@ -213,6 +214,21 @@ export const useChatStore = create<ChatStateExtended & ChatActions>()(
               sessions: state.sessions.map(s =>
                 s.id === updatedSession.id ? updatedSession : s
               ),
+            };
+          });
+        },
+
+        // Fast path: only update currentSession content during streaming (skip sessions[] remap)
+        updateStreamingMessage: (id, content) => {
+          set((state) => {
+            if (!state.currentSession) return state;
+            return {
+              currentSession: {
+                ...state.currentSession,
+                messages: state.currentSession.messages.map(msg =>
+                  msg.id === id ? { ...msg, content } : msg
+                ),
+              },
             };
           });
         },

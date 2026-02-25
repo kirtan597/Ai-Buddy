@@ -20,7 +20,7 @@ export function MessageList() {
     isUserScrolling,
     isAtBottom
   } = useLenisScroll({
-    duration: 1.2,
+    duration: 0.35,    // snappy during streaming
     smooth: true,
     autoScroll: true,
     threshold: 100
@@ -39,14 +39,16 @@ export function MessageList() {
     }
   }, [currentSession?.id, previousSessionId]);
 
-  // Only auto-scroll for new messages, not when switching sessions
+  // Auto-scroll to bottom as new content arrives, only while streaming
+  const messageCount = currentSession?.messages.length ?? 0;
   useEffect(() => {
     if (shouldAutoScroll && !isUserScrolling && !isSessionSwitching && isStreaming) {
-      requestAnimationFrame(() => {
-        scrollToBottom(true);
-      });
+      scrollToBottom(true);
     }
-  }, [currentSession?.messages, isStreaming, shouldAutoScroll, isUserScrolling, scrollToBottom, isSessionSwitching]);
+    // Depend on messageCount so we scroll when a new bubble is added,
+    // but NOT on every content-change (streaming updates currentSession deeply).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messageCount, isStreaming]);
 
   // Immediate scroll to bottom when switching sessions
   useEffect(() => {
@@ -95,10 +97,11 @@ export function MessageList() {
       {/* Lenis Scroll Container */}
       <div
         ref={scrollRef}
-        className="h-full"
+        className="h-full overscroll-none"
         style={{
           overflow: 'hidden',
-          position: 'relative'
+          position: 'relative',
+          WebkitOverflowScrolling: 'touch',
         }}
       >
         <div className="max-w-4xl mx-auto p-3 md:p-6 space-y-4 md:space-y-6 pb-32 md:pb-36 min-h-full">
