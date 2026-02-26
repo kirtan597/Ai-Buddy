@@ -12,20 +12,42 @@ interface LenisScrollOptions {
 export function useLenisScroll(options: LenisScrollOptions = {}) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const lenisRef = useRef<Lenis | null>(null);
-  const [isUserScrolling, setIsUserScrolling] = useState(false);
-  const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
+  const rafIdRef = useRef<number | null>(null);
+
+  // Use refs for transient values to avoid re-renders on every scroll tick
+  const isUserScrollingRef = useRef(false);
+  const shouldAutoScrollRef = useRef(true);
+  const isAtBottomRef = useRef(true);
+  const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Only state that needs to drive UI updates
   const [isAtBottom, setIsAtBottom] = useState(true);
-  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const {
     duration = 1.2,
     easing = (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-    smooth = true,
     autoScroll = true,
-    threshold = 100
+    threshold = 100,
   } = options;
 
-  // Initialize Lenis
+  // ─── Start / stop the rAF loop on demand ───────────────────────────────────
+  const startRaf = useCallback(() => {
+    if (rafIdRef.current !== null) return; // already running
+    function tick(time: number) {
+      lenisRef.current?.raf(time);
+      rafIdRef.current = requestAnimationFrame(tick);
+    }
+    rafIdRef.current = requestAnimationFrame(tick);
+  }, []);
+
+  const stopRaf = useCallback(() => {
+    if (rafIdRef.current !== null) {
+      cancelAnimationFrame(rafIdRef.current);
+      rafIdRef.current = null;
+    }
+  }, []);
+
+  // ─── Lenis initialisation ───────────────────────────────────────────────────
   useEffect(() => {
     if (!scrollRef.current) return;
 
@@ -38,113 +60,92 @@ export function useLenisScroll(options: LenisScrollOptions = {}) {
 
     lenisRef.current = lenis;
 
-    // Animation frame loop
-    function raf(time: number) {
-      lenis.raf(time);
-      requestAnimationFrame(raf);
-    }
-    requestAnimationFrame(raf);
+    // Only run the rAF while Lenis is actually animating
+    lenis.on('scroll', (e: any) => {
+      const { scroll, limit } = e;
+      const nearBottom = limit - scroll < threshold;
 
-    // Listen to scroll events
-    lenis.on('scroll', handleLenisScroll);
+      // Update refs (no re-render cost)
+      isAtBottomRef.current = nearBottom;
+      shouldAutoScrollRef.current = nearBottom;
+      isUserScrollingRef.current = true;
+
+      // Batch: only one setState per leading edge of scroll burst
+      setIsAtBottom(nearBottom);
+
+      if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
+      scrollTimeoutRef.current = setTimeout(() => {
+        isUserScrollingRef.current = false;
+      }, 1200);
+    });
+
+    // Lenis emits 'scroll' on every frame, so we drive rAF ourselves.
+    // Start it now; we'll throttle it after any animation settles.
+    startRaf();
 
     return () => {
+      stopRaf();
       lenis.destroy();
       lenisRef.current = null;
     };
-  }, [duration, easing, smooth]);
+    // Only re-init when core options change (rare)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [duration]);
 
-  const handleLenisScroll = useCallback((e: any) => {
-    if (!scrollRef.current) return;
+  // ─── Scroll helpers ─────────────────────────────────────────────────────────
+  const scrollToBottom = useCallback(
+    (animated = true) => {
+      if (!lenisRef.current) return;
 
-    const { scroll, limit } = e;
-    const isNearBottom = limit - scroll < threshold;
-    
-    setIsAtBottom(isNearBottom);
-
-    // Clear existing timeout
-    if (scrollTimeoutRef.current) {
-      clearTimeout(scrollTimeoutRef.current);
-    }
-
-    // User is scrolling
-    setIsUserScrolling(true);
-    setShouldAutoScroll(isNearBottom);
-
-    // Reset user scrolling after 1.5 seconds
-    scrollTimeoutRef.current = setTimeout(() => {
-      setIsUserScrolling(false);
-    }, 1500);
-  }, [threshold]);
-
-  const scrollToBottom = useCallback((animated = true) => {
-    if (!lenisRef.current) return;
-
-    // For instant scrolling (session switching), use immediate scroll
-    if (!animated) {
-      // Force immediate scroll without any animation
-      const element = scrollRef.current;
-      if (element) {
-        element.scrollTop = element.scrollHeight;
+      if (!animated) {
+        // Instant jump — bypass Lenis
+        if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+        return;
       }
-      return;
-    }
 
-    lenisRef.current.scrollTo('bottom', {
-      duration: duration,
-      easing: easing,
-    });
-  }, [duration, easing, scrollRef]);
+      startRaf(); // ensure loop is running for the animation
+      lenisRef.current.scrollTo('bottom', { duration, easing });
+    },
+    [duration, easing, startRaf],
+  );
 
-  const scrollToTop = useCallback((animated = true) => {
-    if (!lenisRef.current) return;
+  const scrollToTop = useCallback(
+    (animated = true) => {
+      if (!lenisRef.current) return;
+      startRaf();
+      lenisRef.current.scrollTo('top', { duration: animated ? duration : 0, easing: animated ? easing : undefined });
+    },
+    [duration, easing, startRaf],
+  );
 
-    lenisRef.current.scrollTo('top', {
-      duration: animated ? duration : 0,
-      easing: animated ? easing : undefined,
-    });
-  }, [duration, easing]);
-
-  const scrollToElement = useCallback((target: string | HTMLElement, animated = true) => {
-    if (!lenisRef.current) return;
-
-    lenisRef.current.scrollTo(target, {
-      duration: animated ? duration : 0,
-      easing: animated ? easing : undefined,
-      offset: -20, // Small offset from top
-    });
-  }, [duration, easing]);
+  const scrollToElement = useCallback(
+    (target: string | HTMLElement, animated = true) => {
+      if (!lenisRef.current) return;
+      startRaf();
+      lenisRef.current.scrollTo(target, {
+        duration: animated ? duration : 0,
+        easing: animated ? easing : undefined,
+        offset: -20,
+      });
+    },
+    [duration, easing, startRaf],
+  );
 
   const forceScrollToBottom = useCallback(() => {
-    setIsUserScrolling(false);
-    setShouldAutoScroll(true);
+    isUserScrollingRef.current = false;
+    shouldAutoScrollRef.current = true;
+    isAtBottomRef.current = true;
     setIsAtBottom(true);
-    
-    // Use requestAnimationFrame for smooth transition
-    requestAnimationFrame(() => {
-      scrollToBottom(true);
-    });
+    requestAnimationFrame(() => scrollToBottom(true));
   }, [scrollToBottom]);
 
-  // Stop/start smooth scrolling
-  const stopScroll = useCallback(() => {
-    if (lenisRef.current) {
-      lenisRef.current.stop();
-    }
-  }, []);
+  const stopScroll = useCallback(() => lenisRef.current?.stop(), []);
+  const startScroll = useCallback(() => lenisRef.current?.start(), []);
 
-  const startScroll = useCallback(() => {
-    if (lenisRef.current) {
-      lenisRef.current.start();
-    }
-  }, []);
-
-  // Cleanup timeout on unmount
+  // Cleanup
   useEffect(() => {
     return () => {
-      if (scrollTimeoutRef.current) {
-        clearTimeout(scrollTimeoutRef.current);
-      }
+      if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
     };
   }, []);
 
@@ -157,8 +158,9 @@ export function useLenisScroll(options: LenisScrollOptions = {}) {
     forceScrollToBottom,
     stopScroll,
     startScroll,
-    shouldAutoScroll: autoScroll ? shouldAutoScroll : false,
-    isUserScrolling,
+    // Expose refs so callers can read without subscribing to state
+    shouldAutoScroll: autoScroll ? shouldAutoScrollRef : { current: false },
+    isUserScrollingRef,
     isAtBottom,
   };
 }

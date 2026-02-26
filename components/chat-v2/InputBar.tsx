@@ -19,16 +19,14 @@ export function InputBar({ onShowLogin }: InputBarProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: session, status } = useSession();
-  const {
-    addMessage,
-    isStreaming,
-    guestMessageCount,
-    incrementGuestMessageCount,
-    resetGuestMessageCount,
-    currentSession
-  } = useChatStore();
 
-  // Pull fast streaming updater directly (not from hook to avoid re-subscribing)
+  // Fine-grained selectors — InputBar must NOT re-render on every streaming chunk
+  const addMessage = useChatStore(s => s.addMessage);
+  const isStreaming = useChatStore(s => s.isStreaming);
+  const guestMessageCount = useChatStore(s => s.guestMessageCount);
+  const incrementGuestMessageCount = useChatStore(s => s.incrementGuestMessageCount);
+  const resetGuestMessageCount = useChatStore(s => s.resetGuestMessageCount);
+  const currentSessionId = useChatStore(s => s.currentSession?.id);
   const updateStreamingMessage = useChatStore(s => s.updateStreamingMessage);
 
   // Reset guest count when logged in
@@ -38,7 +36,12 @@ export function InputBar({ onShowLogin }: InputBarProps) {
     }
   }, [session, resetGuestMessageCount]);
 
-  // ... (existing mobile check useEffect)
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
 
   const handleSubmit = async () => {
     if (!input.trim() && attachments.length === 0) return;
@@ -62,7 +65,7 @@ export function InputBar({ onShowLogin }: InputBarProps) {
     const messageAttachments = [...attachments];
 
     // Ensure session exists
-    if (!currentSession) {
+    if (!currentSessionId) {
       useChatStore.getState().createSession();
     }
 
@@ -96,7 +99,7 @@ export function InputBar({ onShowLogin }: InputBarProps) {
     try {
       const formData = new FormData();
       formData.append('message', messageContent);
-      formData.append('conversationId', currentSession?.id || '');
+      formData.append('conversationId', currentSessionId || '');
       messageAttachments.forEach(file => {
         formData.append('files', file);
       });
@@ -218,8 +221,10 @@ export function InputBar({ onShowLogin }: InputBarProps) {
 
   return (
     <div
-      className="px-2 py-2 md:px-4 md:py-3"
-      style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}
+      className="px-3 pt-2 md:px-5 md:pt-3"
+      style={{
+        paddingBottom: 'max(env(safe-area-inset-bottom, 0px) + 0.625rem, 0.75rem)',
+      }}
     >
       {/* Attachments Preview */}
       <AnimatePresence>
@@ -260,7 +265,7 @@ export function InputBar({ onShowLogin }: InputBarProps) {
       </AnimatePresence>
 
       {/* ── Main input row: [+]  [textarea]  [Send] ── */}
-      <div className="relative flex items-end gap-2">
+      <div className="relative flex items-end gap-2.5">
 
         {/* ── Plus button (left side) with popup menu ── */}
         <div className="relative flex-shrink-0 self-end mb-0.5">
@@ -352,35 +357,68 @@ export function InputBar({ onShowLogin }: InputBarProps) {
         </div>
 
         {/* ── Text input ── */}
-        <div className="flex-1 flex items-end bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-violet-200 dark:border-gray-700 rounded-2xl px-3 py-2.5 md:px-4 md:py-3 shadow-lg">
+        <div
+          className="
+            group flex-1 flex items-end
+            bg-white/70 dark:bg-gray-800/70
+            backdrop-blur-xl
+            border border-violet-200/70 dark:border-gray-700/60
+            focus-within:border-violet-400 dark:focus-within:border-violet-500
+            focus-within:ring-2 focus-within:ring-violet-300/30 dark:focus-within:ring-violet-600/20
+            focus-within:shadow-[0_0_18px_rgba(139,92,246,0.15)]
+            rounded-[1.25rem] md:rounded-[1.4rem]
+            px-3.5 py-2.5 md:px-4 md:py-3
+            shadow-[0_2px_12px_rgba(139,92,246,0.08)]
+            transition-all duration-200
+          "
+        >
           <textarea
             ref={textareaRef}
             value={input}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
-            placeholder={isMobile ? 'Type a message...' : 'Type your message... (Shift+Enter for new line)'}
-            className="flex-1 resize-none bg-transparent text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none text-sm md:text-base leading-relaxed"
+            placeholder={isMobile ? 'Message AI Buddy…' : 'Message AI Buddy… (Shift+Enter for new line)'}
+            className="
+              flex-1 resize-none bg-transparent
+              text-gray-900 dark:text-white
+              placeholder-gray-400 dark:placeholder-gray-500
+              focus:outline-none
+              text-[15px] md:text-[15px] leading-[1.5]
+              caret-violet-500
+            "
             rows={1}
             style={{
-              minHeight: '22px',
-              maxHeight: isMobile ? '80px' : '120px',
-              fontSize: isMobile ? '16px' : '14px',
+              minHeight: '24px',
+              maxHeight: isMobile ? '96px' : '140px',
+              /* Prevent iOS zoom on focus — keep at 16px equivalent */
+              fontSize: '16px',
+              WebkitTextSizeAdjust: '100%',
             }}
           />
 
           {/* Send button — inside the text box on the right */}
           <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+            whileHover={{ scale: 1.06 }}
+            whileTap={{ scale: 0.93 }}
             onClick={handleSubmit}
             disabled={(!input.trim() && attachments.length === 0) || isStreaming}
-            className="flex-shrink-0 ml-2 p-1.5 md:p-2 bg-gradient-to-r from-violet-500 to-indigo-500 text-white rounded-xl hover:from-violet-600 hover:to-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 shadow-md touch-manipulation self-end"
+            className="
+              flex-shrink-0 ml-2 self-end
+              w-8 h-8 md:w-9 md:h-9
+              flex items-center justify-center
+              bg-gradient-to-br from-violet-500 via-purple-500 to-indigo-500
+              text-white rounded-[0.9rem]
+              hover:shadow-[0_4px_18px_rgba(139,92,246,0.45)]
+              disabled:opacity-35 disabled:cursor-not-allowed disabled:shadow-none
+              transition-all duration-200
+              touch-manipulation
+            "
             title="Send message"
           >
             {isStreaming ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
+              <Loader2 className="w-[17px] h-[17px] animate-spin" />
             ) : (
-              <Send className="w-4 h-4" />
+              <Send className="w-[15px] h-[15px]" />
             )}
           </motion.button>
         </div>

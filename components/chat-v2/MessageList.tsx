@@ -1,64 +1,106 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useChatStore } from '@/lib/chat-v2/chatStore';
 import { useLenisScroll } from '@/hooks/useLenisScroll';
 import { MessageBubble } from './MessageBubble';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowDown } from 'lucide-react';
 
+// Fine-grained selectors — only re-render when what we care about changes
+const selectMessages = (s: any) => s.currentSession?.messages;
+const selectSessionId = (s: any) => s.currentSession?.id;
+const selectIsStreaming = (s: any) => s.isStreaming;
+
 export function MessageList() {
-  const { currentSession, isStreaming } = useChatStore();
+  // Subscribe to minimal slices of the store so streaming content updates
+  // DON'T cause MessageList itself to re-render (MessageBubble.memo handles that)
+  const messages = useChatStore(selectMessages);
+  const sessionId = useChatStore(selectSessionId);
+  const isStreaming = useChatStore(selectIsStreaming);
+
   const [isSessionSwitching, setIsSessionSwitching] = useState(false);
-  const [previousSessionId, setPreviousSessionId] = useState<string | null>(null);
+  const previousSessionIdRef = useRef<string | null>(null);
 
   const {
     scrollRef,
     scrollToBottom,
     forceScrollToBottom,
     shouldAutoScroll,
-    isUserScrolling,
-    isAtBottom
+    isUserScrollingRef,
+    isAtBottom,
   } = useLenisScroll({
-    duration: 0.35,    // snappy during streaming
+    duration: 0.3,
     smooth: true,
     autoScroll: true,
-    threshold: 100
+    threshold: 120,
   });
 
-  // Detect session switching - make this more aggressive
+  // ── Session switch detection ──────────────────────────────────────────────
   useEffect(() => {
-    if (currentSession?.id !== previousSessionId) {
+    if (sessionId !== previousSessionIdRef.current) {
       setIsSessionSwitching(true);
-      setPreviousSessionId(currentSession?.id || null);
-
-      // Much shorter delay - almost instant
-      setTimeout(() => {
-        setIsSessionSwitching(false);
-      }, 10); // Reduced from 100ms to 10ms
+      previousSessionIdRef.current = sessionId ?? null;
+      const t = setTimeout(() => setIsSessionSwitching(false), 10);
+      return () => clearTimeout(t);
     }
-  }, [currentSession?.id, previousSessionId]);
+  }, [sessionId]);
 
-  // Auto-scroll to bottom as new content arrives, only while streaming
-  const messageCount = currentSession?.messages.length ?? 0;
+  // Instant scroll when switching sessions
   useEffect(() => {
-    if (shouldAutoScroll && !isUserScrolling && !isSessionSwitching && isStreaming) {
+    if (isSessionSwitching && messages?.length) {
+      scrollToBottom(false); // no animation
+    }
+  }, [isSessionSwitching, messages?.length, scrollToBottom]);
+
+  // ── Auto-scroll: only when a NEW message bubble appears ──────────────────
+  const messageCount = messages?.length ?? 0;
+  useEffect(() => {
+    if (messageCount === 0) return;
+    // Only scroll if user hasn't scrolled up
+    if ((shouldAutoScroll as any).current !== false && !isUserScrollingRef.current) {
       scrollToBottom(true);
     }
-    // Depend on messageCount so we scroll when a new bubble is added,
-    // but NOT on every content-change (streaming updates currentSession deeply).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [messageCount, isStreaming]);
+  }, [messageCount]);
 
-  // Immediate scroll to bottom when switching sessions
+  // ── Streaming auto-scroll: throttled via rAF ─────────────────────────────
+  // We don't subscribe to content — instead we run a periodic check while streaming
+  const streamingRafRef = useRef<number | null>(null);
+
   useEffect(() => {
-    if (isSessionSwitching && currentSession?.messages.length) {
-      // Immediate scroll without any delay
-      scrollToBottom(false);
+    if (!isStreaming) {
+      if (streamingRafRef.current !== null) {
+        cancelAnimationFrame(streamingRafRef.current);
+        streamingRafRef.current = null;
+      }
+      return;
     }
-  }, [isSessionSwitching, currentSession?.messages.length, scrollToBottom]);
 
-  if (!currentSession?.messages.length) {
+    let lastScroll = 0;
+    function tick(time: number) {
+      // Throttle: scroll at most every 100ms
+      if (time - lastScroll > 100) {
+        if ((shouldAutoScroll as any).current !== false && !isUserScrollingRef.current) {
+          scrollToBottom(true);
+        }
+        lastScroll = time;
+      }
+      streamingRafRef.current = requestAnimationFrame(tick);
+    }
+    streamingRafRef.current = requestAnimationFrame(tick);
+
+    return () => {
+      if (streamingRafRef.current !== null) {
+        cancelAnimationFrame(streamingRafRef.current);
+        streamingRafRef.current = null;
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isStreaming]);
+
+  // ── Empty state ───────────────────────────────────────────────────────────
+  if (!messages?.length) {
     return (
       <div className="absolute inset-0 flex items-center justify-center p-4 md:p-8">
         <motion.div
@@ -75,7 +117,7 @@ export function MessageList() {
             Start Your Conversation
           </h3>
           <p className="text-sm md:text-base text-gray-600 dark:text-gray-400 mb-4 md:mb-6 leading-relaxed">
-            Ask me anything, upload images or documents, and let's have an intelligent conversation!
+            Ask me anything, upload images or documents, and let&apos;s have an intelligent conversation!
           </p>
           <div className="grid grid-cols-1 gap-2 md:gap-3 text-xs md:text-sm">
             <div className="p-2 md:p-3 bg-white/60 dark:bg-gray-800/60 rounded-lg border border-violet-200 dark:border-gray-700">
@@ -84,7 +126,7 @@ export function MessageList() {
             </div>
             <div className="p-2 md:p-3 bg-white/60 dark:bg-gray-800/60 rounded-lg border border-violet-200 dark:border-gray-700">
               <div className="font-medium text-violet-600 dark:text-violet-400 mb-1">📁 Upload Files</div>
-              <div className="text-gray-600 dark:text-gray-400">Images & documents</div>
+              <div className="text-gray-600 dark:text-gray-400">Images &amp; documents</div>
             </div>
           </div>
         </motion.div>
@@ -105,21 +147,19 @@ export function MessageList() {
         }}
       >
         <div className="max-w-4xl mx-auto p-3 md:p-6 space-y-4 md:space-y-6 pb-32 md:pb-36 min-h-full">
-          {/* Completely remove AnimatePresence for session switching - it causes lag */}
-          {currentSession.messages.map((message, index) => (
+          {messages.map((message: any, index: number) => (
             <MessageBubble
-              key={`${currentSession.id}-${message.id}`} // Force re-render with session ID
+              key={`${sessionId}-${message.id}`}
               message={message}
               index={index}
               isSessionSwitching={isSessionSwitching}
             />
           ))}
-          {/* Scroll anchor for Lenis */}
           <div id="scroll-anchor" className="h-1" />
         </div>
       </div>
 
-      {/* Scroll to Bottom Button - hide during session switching */}
+      {/* Scroll to Bottom Button */}
       {!isSessionSwitching && (
         <AnimatePresence>
           {!isAtBottom && (

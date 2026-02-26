@@ -167,7 +167,7 @@ function ChatInterfaceContent() {
         </div>
 
         {/* Input - Mobile Optimized */}
-        <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border-t border-violet-200 dark:border-gray-700 flex-shrink-0">
+        <div className="bg-white/60 dark:bg-gray-900/60 backdrop-blur-md border-t border-violet-100/60 dark:border-gray-700/50 flex-shrink-0">
           <InputBar onShowLogin={() => setShowLoginModal(true)} />
         </div>
       </div>
