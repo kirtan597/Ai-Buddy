@@ -16,7 +16,7 @@ function ChatInterfaceContent() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
 
   // Fetch messages if current session is empty (e.g. on new device load)
   useEffect(() => {
@@ -25,40 +25,26 @@ function ChatInterfaceContent() {
     }
   }, [session, currentSession?.id, currentSession?.messages.length, fetchMessages]);
 
-  // Fetch sessions on login
+  // Fetch sessions on login — runs exactly once when the user becomes authenticated
   useEffect(() => {
-    if (session?.user) {
-      fetch('/api/conversations/list')
-        .then((res) => {
-          if (res.ok) return res.json();
-          throw new Error('Failed to fetch sessions');
-        })
-        .then((data) => {
-          // Map backend _id to frontend id if necessary, or ensure types match
-          // Assuming backend returns array of objects with id/title/etc.
-          // MongoDB returns _id. Frontend expects id. 
-          // I should map it here or in the store. 
-          // Ideally the API should return 'id'.
-          // I'll handle mapping in the transform if needed, but for now passing data.
-          // Actually, let's map it safely.
-          const formattedSessions = data.map((s: any) => ({
-            ...s,
-            id: s._id || s.id,
-            messages: [], // Message list is fetched on demand usually? 
-            // Wait, the store expects full objects?
-            // Sidebar expects messages.length.
-            // My API 'list' route sends conversation objects.
-            // It does NOT send messages.
-            // So I need to handle that.
-            // The store 'sessions' usually expects full sessions.
-            // If I set sessions with empty messages, sidebar count will be 0.
-            // That's acceptable for "History" view where we just load on click.
-          }));
-          setSessions(formattedSessions);
-        })
-        .catch((err) => console.error(err));
-    }
-  }, [session, setSessions]);
+    if (!session?.user) return;
+
+    fetch('/api/conversations/list')
+      .then((res) => {
+        if (res.ok) return res.json();
+        throw new Error('Failed to fetch sessions');
+      })
+      .then((data: any[]) => {
+        const formattedSessions = data.map((s) => ({
+          ...s,
+          id: s._id || s.id,
+          messages: [],
+        }));
+        setSessions(formattedSessions);
+      })
+      .catch((err) => console.error('[ChatInterface] Failed to load sessions:', err));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.user?.email]); // only re-run if the logged-in user changes
 
   // Detect mobile devices and screen size
   useEffect(() => {
@@ -73,12 +59,15 @@ function ChatInterfaceContent() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  // Create a local session for unauthenticated (guest) users only
   useEffect(() => {
-    if (!currentSession && !session) {
-      // Create local session for guest
+    // Never create a guest session while auth is loading or when the user IS logged in
+    if (status === 'loading') return;
+    if (status === 'authenticated') return;
+    if (!currentSession) {
       createSession();
     }
-  }, [currentSession, createSession, session]);
+  }, [currentSession, createSession, status]);
 
   // Close sidebar when clicking outside on mobile
   useEffect(() => {

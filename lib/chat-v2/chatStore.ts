@@ -62,48 +62,66 @@ export const useChatStore = create<ChatStateExtended & ChatActions>()(
 
       setSessions: (sessions) => {
         set((state) => {
-          // Merge with existing sessions to preserve messages
-          // We want to use the new session metadata (title, time) from `sessions`
-          // But we want to keep the `messages` array from `state.sessions` if it's not empty.
           if (!sessions) return state; // Safety check
 
+          // Merge server sessions with local state, preserving cached messages
           const mergedSessions = sessions.map(newSession => {
             const existing = state.sessions.find(s => s.id === newSession.id);
             if (existing && existing.messages.length > 0) {
+              // Keep locally-cached messages; server list only carries metadata
               return { ...newSession, messages: existing.messages };
             }
             return newSession;
           });
 
-          // Try to keep the current session if it exists in the new list, otherwise select the first one or create new
           const currentId = state.currentSession?.id;
-          const exists = mergedSessions.find(s => s.id === currentId);
 
-          // Ensure there is always a current session
-          let newCurrentSession = exists || mergedSessions[0] || null;
+          // Check if current session exists in the merged server list
+          const currentInMerged = mergedSessions.find(s => s.id === currentId);
 
-          if (!newCurrentSession && mergedSessions.length === 0) {
-            // If no sessions exist after merge, create a fresh one to avoid null state
-            const newSession: ChatSession = {
+          // Check if current session is a local-only (not yet synced) session:
+          // a local session won't be in the server list but should NOT be discarded.
+          const currentIsLocalOnly =
+            currentId &&
+            !sessions.find((s: ChatSession) => s.id === currentId) &&
+            state.sessions.find(s => s.id === currentId);
+
+          let newCurrentSession: ChatSession | null;
+          let finalSessions: ChatSession[];
+
+          if (currentInMerged) {
+            // Current session is known to the server — keep it
+            newCurrentSession = currentInMerged;
+            finalSessions = mergedSessions;
+          } else if (currentIsLocalOnly) {
+            // Current session is local-only (e.g. guest session or brand-new chat):
+            // Keep it and prepend it so it's visible in the sidebar
+            newCurrentSession = state.currentSession;
+            finalSessions = [
+              state.currentSession!,
+              ...mergedSessions.filter(s => s.id !== currentId),
+            ];
+          } else {
+            // Current session is gone or was never set — switch to first server session
+            newCurrentSession = mergedSessions[0] || null;
+            finalSessions = mergedSessions;
+          }
+
+          // If still no session at all, create a blank one so the UI is never stuck
+          if (!newCurrentSession) {
+            const blank: ChatSession = {
               id: nanoid(),
               title: 'New Chat',
               messages: [],
               createdAt: new Date(),
               updatedAt: new Date(),
-              settings: {
-                model: 'openai/gpt-4o-mini',
-                temperature: 0.7,
-                maxTokens: 2000,
-              },
+              settings: { model: 'openai/gpt-4o-mini', temperature: 0.7, maxTokens: 2000 },
             };
-            mergedSessions.push(newSession);
-            newCurrentSession = newSession;
+            finalSessions = [blank, ...finalSessions];
+            newCurrentSession = blank;
           }
 
-          return {
-            sessions: mergedSessions,
-            currentSession: newCurrentSession
-          }
+          return { sessions: finalSessions, currentSession: newCurrentSession };
         });
       },
 
@@ -111,14 +129,16 @@ export const useChatStore = create<ChatStateExtended & ChatActions>()(
         try {
           const res = await fetch(`/api/conversation/${sessionId}/messages`);
           if (!res.ok) {
-            // If API fails (e.g. DB offline), keep local state and valid "offline" usage
+            // DB offline or session not yet persisted — keep local state
             console.warn('Network/DB unavailable, using local history if available.');
             return;
           }
           const messages = await res.json();
 
           set((state) => {
-            // Map backend messages to frontend format
+            // Guard: if the user has already switched to a different session by
+            // the time this response arrives, silently cache the messages in
+            // sessions[] but do NOT change currentSession.
             const formattedMessages: Message[] = messages.map((m: any) => ({
               id: m._id || m.id,
               role: m.role,
@@ -131,12 +151,13 @@ export const useChatStore = create<ChatStateExtended & ChatActions>()(
               s.id === sessionId ? { ...s, messages: formattedMessages } : s
             );
 
-            return {
-              sessions: updatedSessions,
-              currentSession: state.currentSession?.id === sessionId
+            // Only update currentSession if it's still the requested session
+            const updatedCurrent =
+              state.currentSession?.id === sessionId
                 ? { ...state.currentSession, messages: formattedMessages }
-                : state.currentSession
-            };
+                : state.currentSession;
+
+            return { sessions: updatedSessions, currentSession: updatedCurrent };
           });
         } catch (error) {
           console.error('Error fetching messages (Offline mode):', error);
@@ -157,14 +178,28 @@ export const useChatStore = create<ChatStateExtended & ChatActions>()(
       deleteSession: (sessionId) => {
         set((state) => {
           const updatedSessions = state.sessions.filter(s => s.id !== sessionId);
-          const newCurrentSession = state.currentSession?.id === sessionId
-            ? (updatedSessions[0] || null)
-            : state.currentSession;
 
-          return {
-            sessions: updatedSessions,
-            currentSession: newCurrentSession,
-          };
+          let newCurrentSession: ChatSession | null =
+            state.currentSession?.id === sessionId
+              ? (updatedSessions[0] || null)
+              : state.currentSession;
+
+          // If all sessions were removed, auto-create a blank one so the UI
+          // is never left in a null/blocked state
+          if (!newCurrentSession) {
+            const blank: ChatSession = {
+              id: nanoid(),
+              title: 'New Chat',
+              messages: [],
+              createdAt: new Date(),
+              updatedAt: new Date(),
+              settings: { model: 'openai/gpt-4o-mini', temperature: 0.7, maxTokens: 2000 },
+            };
+            updatedSessions.push(blank);
+            newCurrentSession = blank;
+          }
+
+          return { sessions: updatedSessions, currentSession: newCurrentSession };
         });
       },
 

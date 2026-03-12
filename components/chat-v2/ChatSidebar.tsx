@@ -51,7 +51,7 @@ export function ChatSidebar({ onShowLogin }: ChatSidebarProps) {
 
         // Map backend response to frontend session format
         const newSession = {
-          id: data._id, // Use _id from MongoDB
+          id: data._id || data.id, // Use _id from MongoDB, fall back to id
           title: data.title,
           messages: [],
           createdAt: new Date(data.createdAt),
@@ -63,7 +63,9 @@ export function ChatSidebar({ onShowLogin }: ChatSidebarProps) {
           },
         };
 
-        setSessions([newSession, ...sessions]);
+        // Use the live store snapshot at update-time to avoid stale closure
+        const latestSessions = useChatStore.getState().sessions;
+        setSessions([newSession, ...latestSessions.filter(s => s.id !== newSession.id)]);
         switchToSession(newSession.id);
       } catch (error) {
         console.error('Error creating new chat:', error);

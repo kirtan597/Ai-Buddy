@@ -22,12 +22,16 @@ export function InputBar({ onShowLogin }: InputBarProps) {
 
   // Fine-grained selectors — InputBar must NOT re-render on every streaming chunk
   const addMessage = useChatStore(s => s.addMessage);
+  const setStreaming = useChatStore(s => s.setStreaming);
   const isStreaming = useChatStore(s => s.isStreaming);
   const guestMessageCount = useChatStore(s => s.guestMessageCount);
   const incrementGuestMessageCount = useChatStore(s => s.incrementGuestMessageCount);
   const resetGuestMessageCount = useChatStore(s => s.resetGuestMessageCount);
   const currentSessionId = useChatStore(s => s.currentSession?.id);
   const updateStreamingMessage = useChatStore(s => s.updateStreamingMessage);
+
+  // Abort controller to cancel in-flight requests
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Reset guest count when logged in
   useEffect(() => {
@@ -95,11 +99,21 @@ export function InputBar({ onShowLogin }: InputBarProps) {
       })),
     });
 
+    // Cancel any previous in-flight request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+
     // Send to API
+    setStreaming(true);
     try {
       const formData = new FormData();
       formData.append('message', messageContent);
-      formData.append('conversationId', currentSessionId || '');
+      // Use the LATEST sessionId from the store at submit-time (may have changed if createSession ran)
+      const sessionId = useChatStore.getState().currentSession?.id || '';
+      formData.append('conversationId', sessionId);
       messageAttachments.forEach(file => {
         formData.append('files', file);
       });
@@ -107,6 +121,7 @@ export function InputBar({ onShowLogin }: InputBarProps) {
       const response = await fetch('/api/chat-v2', {
         method: 'POST',
         body: formData,
+        signal: abortController.signal,
       });
 
       if (!response.ok) throw new Error('Failed to send message');
@@ -122,13 +137,13 @@ export function InputBar({ onShowLogin }: InputBarProps) {
         isStreaming: true,
       });
 
-      // Get the message ID from the store
+      // Get the message ID from the store — snapshot immediately after addMessage
       const currentMessages = useChatStore.getState().currentSession?.messages || [];
       const assistantMessageId = currentMessages[currentMessages.length - 1]?.id || '';
 
       // --- Optimised streaming loop ---
-      // We accumulate content in a local variable and only push to the store
-      // once per animation frame, preventing one state-update per tiny chunk.
+      // Accumulate in a local variable and flush to the store once per animation
+      // frame to avoid one state-update per tiny SSE chunk.
       let accumulatedContent = '';
       let rafPending = false;
 
@@ -139,52 +154,64 @@ export function InputBar({ onShowLogin }: InputBarProps) {
 
       const decoder = new TextDecoder();
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
 
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split('\n');
+          const chunk = decoder.decode(value, { stream: true });
+          const lines = chunk.split('\n');
 
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const dataStr = line.slice(6);
-            if (dataStr === '[DONE]') break;
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const dataStr = line.slice(6);
+              if (dataStr === '[DONE]') break;
 
-            try {
-              const data = JSON.parse(dataStr);
-              if (data.content) {
-                accumulatedContent += data.content;
-                // Batch: only schedule one rAF per frame, not one per chunk
-                if (!rafPending) {
-                  rafPending = true;
-                  requestAnimationFrame(flushToStore);
+              try {
+                const data = JSON.parse(dataStr);
+                if (data.content) {
+                  accumulatedContent += data.content;
+                  // Batch: schedule at most one rAF per frame
+                  if (!rafPending) {
+                    rafPending = true;
+                    requestAnimationFrame(flushToStore);
+                  }
+                } else if (data.error) {
+                  throw new Error(data.error);
                 }
-              } else if (data.error) {
-                throw new Error(data.error);
+              } catch (e) {
+                if (e instanceof Error && e.message !== 'Unexpected end of JSON input') {
+                  // Only re-throw real errors, ignore JSON parse errors for partial lines
+                  if (!(e instanceof SyntaxError)) throw e;
+                }
               }
-            } catch (e) {
-              // Ignore JSON parse errors for non-data lines
             }
           }
         }
+      } finally {
+        reader.releaseLock();
       }
 
-      // Flush any remaining content that didn't get a frame yet
+      // Flush any remaining content that skipped the last rAF
       if (accumulatedContent) {
         updateStreamingMessage(assistantMessageId, accumulatedContent);
       }
 
-      // Mark streaming as complete — this triggers sessions[] sync once at the end
+      // Mark the message as done streaming
       const { updateMessage } = useChatStore.getState();
       updateMessage(assistantMessageId, { isStreaming: false });
 
-    } catch (error) {
+    } catch (error: any) {
+      // Ignore abort errors — user intentionally cancelled or started a new chat
+      if (error?.name === 'AbortError') return;
       console.error('Chat error:', error);
       addMessage({
         role: 'assistant',
         content: 'Sorry, I encountered an error. Please try again.',
       });
+    } finally {
+      setStreaming(false);
+      abortControllerRef.current = null;
     }
   };
 
