@@ -48,7 +48,7 @@ export function SettingsModal({ isOpen, onClose, onShowLogin }: SettingsModalPro
         await signIn('google', {
             callbackUrl: window.location.origin,
             prompt: 'select_account',
-        } as any);
+        });
     };
 
     return (

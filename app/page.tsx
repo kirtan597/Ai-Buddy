@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChatInterface } from "@/components/chat-v2/ChatInterface";
 import { LoginModal } from "@/components/LoginModal";
@@ -9,20 +9,12 @@ import { useSession } from "next-auth/react";
 import { signIn } from "next-auth/react";
 
 export default function Home() {
-  const [isLaunched, setIsLaunched] = useState(false);
+  const [manualLaunch, setManualLaunch] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const { data: session, status } = useSession();
 
-  /**
-   * AUTO-LAUNCH: If the user is already signed in (returning user after
-   * Google OAuth redirect OR an existing session cookie), skip the landing
-   * page entirely and go straight into the chat with their history.
-   */
-  useEffect(() => {
-    if (status === 'authenticated' && session?.user && !isLaunched) {
-      setIsLaunched(true);
-    }
-  }, [status, session, isLaunched]);
+  // Derive launched state: either user manually launched OR is already authenticated
+  const isLaunched = manualLaunch || status === 'authenticated';
 
   const handleStartNow = () => {
     const flashDiv = document.createElement('div');
@@ -30,7 +22,7 @@ export default function Home() {
     document.body.appendChild(flashDiv);
     setTimeout(() => {
       flashDiv.remove();
-      setIsLaunched(true);
+      setManualLaunch(true);
     }, 300);
   };
 

@@ -30,18 +30,19 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
+# env files (do NOT commit real secrets)
 .env*
-
-# vercel
-.vercel
-
-# typescript
-*.tsbuildinfo
-next-env.d.ts
 !.env.example
 
+# vercel / netlify deployment artifacts
+.vercel
 
+# typescript build cache
+*.tsbuildinfo
+next-env.d.ts
 
+# editor
 .vscode/
+
+# empty/personal folders
 J-A-R-V-I-S/

@@ -84,9 +84,9 @@ export const authOptions: NextAuthOptions = {
             // JWT is already populated from the jwt() callback above.
             // We read from token here — NO extra DB call needed on every request.
             if (session?.user) {
-                // @ts-ignore
+                // @ts-expect-error — NextAuth Session type doesn't include custom fields
                 session.user.id = token.sub;
-                // @ts-ignore
+                // @ts-expect-error — NextAuth Session type doesn't include custom fields
                 session.user.dbId = token.dbId as string | undefined;
             }
             return session;

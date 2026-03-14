@@ -201,9 +201,9 @@ export function InputBar({ onShowLogin }: InputBarProps) {
       const { updateMessage } = useChatStore.getState();
       updateMessage(assistantMessageId, { isStreaming: false });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Ignore abort errors — user intentionally cancelled or started a new chat
-      if (error?.name === 'AbortError') return;
+      if (error instanceof Error && error.name === 'AbortError') return;
       console.error('Chat error:', error);
       addMessage({
         role: 'assistant',
@@ -241,10 +241,6 @@ export function InputBar({ onShowLogin }: InputBarProps) {
     setAttachments(prev => prev.filter((_, i) => i !== index));
   };
 
-  const quickActions = [
-    { icon: Image, label: 'Image', accept: 'image/*' },
-    { icon: FileText, label: 'Document', accept: '.pdf,.doc,.docx,.txt' },
-  ];
 
   return (
     <div

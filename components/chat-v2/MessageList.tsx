@@ -1,16 +1,18 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useChatStore } from '@/lib/chat-v2/chatStore';
 import { useLenisScroll } from '@/hooks/useLenisScroll';
 import { MessageBubble } from './MessageBubble';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowDown } from 'lucide-react';
 
+import { ChatState } from '@/types/chat-v2';
+
 // Fine-grained selectors — only re-render when what we care about changes
-const selectMessages = (s: any) => s.currentSession?.messages;
-const selectSessionId = (s: any) => s.currentSession?.id;
-const selectIsStreaming = (s: any) => s.isStreaming;
+const selectMessages = (s: ChatState) => s.currentSession?.messages;
+const selectSessionId = (s: ChatState) => s.currentSession?.id;
+const selectIsStreaming = (s: ChatState) => s.isStreaming;
 
 export function MessageList() {
   // Subscribe to minimal slices of the store so streaming content updates
@@ -147,7 +149,7 @@ export function MessageList() {
         }}
       >
         <div className="max-w-4xl mx-auto p-3 md:p-6 space-y-4 md:space-y-6 pb-32 md:pb-36 min-h-full">
-          {messages.map((message: any, index: number) => (
+          {messages.map((message: import('@/types/chat-v2').Message, index: number) => (
             <MessageBubble
               key={`${sessionId}-${message.id}`}
               message={message}

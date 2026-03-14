@@ -87,7 +87,7 @@ export function UserProfileDropdown({ onShowLogin, variant = 'landing' }: UserPr
         await signIn('google', {
             callbackUrl: window.location.origin,
             prompt: 'select_account',
-        } as any);
+        });
     };
 
     // ── Loading state ──────────────────────────────────────────────────────────

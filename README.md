@@ -144,6 +144,8 @@ ai-buddy/
 ├── 📁 types/                        # Global TypeScript type definitions
 ├── 📁 hooks/                        # Custom React hooks
 ├── 📁 public/                       # Static assets
+├── .env.example                     # Environment variable template
+├── netlify.toml                     # Netlify deployment config (optional)
 └── package.json
 ```
 
@@ -171,13 +173,17 @@ npm install
 Create a `.env.local` file in the project root:
 
 ```env
-# ─── AI Provider ────────────────────────────────────────
-OPENROUTER_API_KEY=sk-or-your-openrouter-api-key
+# ─── AI Provider (OpenRouter) ────────────────────────────
+# https://openrouter.ai
+OPENAI_API_KEY=sk-or-your-openrouter-key-for-chat
+OPENROUTER_API_KEY_IMAGE=sk-or-your-openrouter-key-for-image
 
 # ─── Database ───────────────────────────────────────────
+# https://www.mongodb.com/cloud/atlas
 MONGODB_URI=mongodb+srv://<user>:<password>@cluster.mongodb.net/ai-buddy
 
 # ─── Authentication (Google Cloud Console) ──────────────
+# https://console.cloud.google.com
 GOOGLE_CLIENT_ID=your-google-client-id
 GOOGLE_CLIENT_SECRET=your-google-client-secret
 NEXTAUTH_SECRET=your-generated-random-secret

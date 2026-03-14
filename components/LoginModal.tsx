@@ -3,7 +3,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { signIn } from 'next-auth/react';
 import { Sparkles, ArrowRight } from 'lucide-react';
-import { useEffect, useState } from 'react';
 
 interface LoginModalProps {
     isOpen: boolean;
@@ -11,13 +10,6 @@ interface LoginModalProps {
 }
 
 export function LoginModal({ isOpen, onClose }: LoginModalProps) {
-    const [mounted, setMounted] = useState(false);
-
-    useEffect(() => {
-        setMounted(true);
-    }, []);
-
-    if (!mounted) return null;
 
     return (
         <AnimatePresence>

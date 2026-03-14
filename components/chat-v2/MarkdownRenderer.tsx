@@ -1,10 +1,10 @@
 "use client";
 
+import React, { useState, memo } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
-import { useState, memo } from "react";
 import { Copy, Check } from "lucide-react";
 
 // ── Code block with language badge + copy button ──────────────────────────────
@@ -43,7 +43,7 @@ function CodeBlock({ language, children }: { language: string; children: string 
             </div>
 
             {/* Code — scroll horizontally on mobile, never overflow the bubble */}
-            <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" as any }}>
+            <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" } as React.CSSProperties}>
                 <SyntaxHighlighter
                     style={oneDark}
                     language={language || "text"}
@@ -131,7 +131,7 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
                     ),
 
                     // ── Code blocks ──
-                    code({ node, className, children, ...props }) {
+                    code({ className, children }) {
                         const match = /language-(\w+)/.exec(className || "");
                         const raw = String(children).replace(/\n$/, "");
                         const isBlock = match || raw.includes("\n");
@@ -160,10 +160,13 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
                             {children}
                         </ol>
                     ),
-                    li: ({ children, ordered, ...props }: any) => {
+                    li: ({ children }: React.LiHTMLAttributes<HTMLLIElement>) => {
                         const childArray = Array.isArray(children) ? children : [children];
-                        const hasCheckbox = childArray.some(
-                            (child: any) => child?.props?.type === "checkbox"
+                        const hasCheckbox = (childArray as React.ReactElement[]).some(
+                            (child) => {
+                                const el = child as React.ReactElement<{ type?: string }>;
+                                return el?.props?.type === "checkbox";
+                            }
                         );
 
                         if (hasCheckbox) {
@@ -183,7 +186,7 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
                     },
 
                     // ── Checkbox (task list) ──
-                    input: ({ type, checked }: any) => {
+                    input: ({ type, checked }: { type?: string; checked?: boolean }) => {
                         if (type === "checkbox") {
                             return (
                                 <span

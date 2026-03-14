@@ -6,7 +6,7 @@ import { useTheme } from './ThemeProvider';
 import { SessionMenu } from './SessionMenu';
 import { useLenisScroll } from '@/hooks/useLenisScroll';
 import { SettingsModal } from './SettingsModal';
-import { Plus, MessageSquare, Sun, Moon, Settings, Search, X, User, LogOut, LogIn, ChevronUp } from 'lucide-react';
+import { Plus, MessageSquare, Settings, Search, X, User, LogOut, LogIn, ChevronUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSession, signOut } from 'next-auth/react';
 
@@ -16,7 +16,7 @@ interface ChatSidebarProps {
 
 export function ChatSidebar({ onShowLogin }: ChatSidebarProps) {
   const { sessions, currentSession, createSession, switchToSession, setSessions, fetchMessages } = useChatStore();
-  const { theme, toggleTheme } = useTheme();
+  const { theme: _theme, toggleTheme: _toggleTheme } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
   const [showSettings, setShowSettings] = useState(false);
   const [showAccount, setShowAccount] = useState(false);

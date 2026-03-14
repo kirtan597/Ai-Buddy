@@ -117,7 +117,6 @@ export async function POST(request: NextRequest) {
     }
 
     // DB Operations: Verify User & Persist Message (Best Effort)
-    let userId = null;
     let conversationHistory: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [];
 
     if (session?.user?.email && conversationId) {
@@ -125,8 +124,6 @@ export async function POST(request: NextRequest) {
         await dbConnect();
         const user = await User.findOne({ email: session.user.email });
         if (user) {
-          userId = user._id;
-
           // Find or Create Conversation
           let conv = await Conversation.findOne({ _id: conversationId, userId: user._id });
 
@@ -196,7 +193,7 @@ export async function POST(request: NextRequest) {
     const encoder = new TextEncoder();
     const readableStream = new ReadableStream({
       async start(controller) {
-        let currentToolCall: any = null;
+        let currentToolCall: OpenAI.Chat.Completions.ChatCompletionChunk.Choice.Delta.ToolCall | null = null;
         let toolCallArguments = '';
         let fullResponseContent = ''; // Track full response for DB
 
