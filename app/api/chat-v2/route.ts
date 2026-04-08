@@ -196,6 +196,16 @@ export async function POST(request: NextRequest) {
     const message = formData.get('message') as string;
     const files = formData.getAll('files') as File[];
     const conversationId = formData.get('conversationId') as string;
+    const modelOverride = (formData.get('model') as string) || 'openai/gpt-4o-mini';
+
+    // Validate model is an allowed OpenRouter model ID
+    const ALLOWED_MODELS = new Set([
+      'openai/gpt-4o-mini',
+      'openai/gpt-4o',
+      'anthropic/claude-3.5-haiku',
+      'google/gemini-flash-1.5',
+    ]);
+    const model = ALLOWED_MODELS.has(modelOverride) ? modelOverride : 'openai/gpt-4o-mini';
 
     if (!message && files.length === 0) {
       return new Response(
@@ -268,7 +278,7 @@ export async function POST(request: NextRequest) {
 
     // ── Streaming response ────────────────────────────────────────────────────
     const stream = await openai.chat.completions.create({
-      model: 'openai/gpt-4o-mini',
+      model,  // from request — validated against allowlist above
       messages,
       tools,
       tool_choice: 'auto',

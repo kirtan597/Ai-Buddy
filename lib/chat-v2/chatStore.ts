@@ -5,7 +5,6 @@ import { nanoid } from 'nanoid';
 
 interface ChatActions {
   createSession: () => void;
-  // New action to set sessions from API
   setSessions: (sessions: ChatSession[]) => void;
   fetchMessages: (sessionId: string) => Promise<void>;
   switchToSession: (sessionId: string) => void;
@@ -19,6 +18,7 @@ interface ChatActions {
   setError: (error: string | null) => void;
   regenerateLastMessage: () => void;
   updateSessionTitle: (sessionId: string, title: string) => void;
+  setModel: (model: string) => void;
   // Guest mode tracking
   incrementGuestMessageCount: () => void;
   resetGuestMessageCount: () => void;
@@ -26,6 +26,7 @@ interface ChatActions {
 
 interface ChatStateExtended extends ChatState {
   guestMessageCount: number;
+  selectedModel: string;
 }
 
 export const useChatStore = create<ChatStateExtended & ChatActions>()(
@@ -38,6 +39,7 @@ export const useChatStore = create<ChatStateExtended & ChatActions>()(
       isUploading: false,
       error: null,
       guestMessageCount: 0,
+      selectedModel: 'openai/gpt-4o-mini',
 
       // Actions
       createSession: () => {
@@ -295,6 +297,7 @@ export const useChatStore = create<ChatStateExtended & ChatActions>()(
       setStreaming: (isStreaming) => set({ isStreaming }),
       setUploading: (isUploading) => set({ isUploading }),
       setError: (error) => set({ error }),
+      setModel: (model) => set({ selectedModel: model }),
 
       regenerateLastMessage: () => {
         set((state) => {
@@ -329,6 +332,7 @@ export const useChatStore = create<ChatStateExtended & ChatActions>()(
       // Persisting messages on every stream chunk tanks perf and fills localStorage.
       // Messages are always re-fetched from DB (fast: indexed by conversationId + createdAt).
       partialize: (state) => ({
+        selectedModel: state.selectedModel,
         currentSession: state.currentSession
           ? {
               id: state.currentSession.id,
