@@ -325,12 +325,28 @@ export const useChatStore = create<ChatStateExtended & ChatActions>()(
     }),
     {
       name: 'ai-buddy-chat-storage',
-      // Never persist transient streaming state to localStorage
+      // Only persist lightweight metadata — NEVER messages.
+      // Persisting messages on every stream chunk tanks perf and fills localStorage.
+      // Messages are always re-fetched from DB (fast: indexed by conversationId + createdAt).
       partialize: (state) => ({
-        sessions: state.sessions,
         currentSession: state.currentSession
-          ? { ...state.currentSession, messages: state.currentSession.messages.map(m => ({ ...m, isStreaming: false })) }
+          ? {
+              id: state.currentSession.id,
+              title: state.currentSession.title,
+              messages: [],   // never persist messages
+              createdAt: state.currentSession.createdAt,
+              updatedAt: state.currentSession.updatedAt,
+              settings: state.currentSession.settings,
+            }
           : null,
+        sessions: state.sessions.map(s => ({
+          id: s.id,
+          title: s.title,
+          messages: [],       // strip messages from all sessions
+          createdAt: s.createdAt,
+          updatedAt: s.updatedAt,
+          settings: s.settings,
+        })),
         guestMessageCount: state.guestMessageCount,
       }),
     }

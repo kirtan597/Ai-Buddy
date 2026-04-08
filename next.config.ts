@@ -1,6 +1,12 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Disable prod source maps — cuts JS bundle size ~15%
+  productionBrowserSourceMaps: false,
+
+  // Enable gzip/brotli response compression
+  compress: true,
+
   experimental: {
     serverActions: {
       allowedOrigins: [
@@ -11,11 +17,19 @@ const nextConfig: NextConfig = {
         '*.netlify.app',
       ],
     },
+    // Turbopack: deduplicate framer-motion to prevent double-bundling
+    turbo: {
+      resolveAlias: {
+        'framer-motion': 'framer-motion',
+      },
+    },
   },
+
   images: {
+    // Modern format — serves WebP/AVIF automatically
+    formats: ['image/avif', 'image/webp'],
     remotePatterns: [
       {
-        // Google profile pictures (used in session/avatar display)
         protocol: 'https',
         hostname: 'lh3.googleusercontent.com',
       },
@@ -24,7 +38,6 @@ const nextConfig: NextConfig = {
         hostname: '**.googleusercontent.com',
       },
       {
-        // OpenRouter / Cloudflare generated image URLs
         protocol: 'https',
         hostname: '**.openrouter.ai',
       },
@@ -33,6 +46,27 @@ const nextConfig: NextConfig = {
         hostname: '**.cloudflare.com',
       },
     ],
+  },
+
+  // Security + performance headers
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'X-Frame-Options', value: 'DENY' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+        ],
+      },
+      {
+        // Cache static assets aggressively
+        source: '/_next/static/(.*)',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+        ],
+      },
+    ];
   },
 };
 

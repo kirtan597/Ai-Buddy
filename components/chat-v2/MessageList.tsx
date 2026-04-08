@@ -60,7 +60,7 @@ export function MessageList() {
   useEffect(() => {
     if (messageCount === 0) return;
     // Only scroll if user hasn't scrolled up
-    if ((shouldAutoScroll as any).current !== false && !isUserScrollingRef.current) {
+    if (shouldAutoScroll.current && !isUserScrollingRef.current) {
       scrollToBottom(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -83,7 +83,7 @@ export function MessageList() {
     function tick(time: number) {
       // Throttle: scroll at most every 100ms
       if (time - lastScroll > 100) {
-        if ((shouldAutoScroll as any).current !== false && !isUserScrollingRef.current) {
+        if (shouldAutoScroll.current && !isUserScrollingRef.current) {
           scrollToBottom(true);
         }
         lastScroll = time;
@@ -155,6 +155,11 @@ export function MessageList() {
               message={message}
               index={index}
               isSessionSwitching={isSessionSwitching}
+              onRegenerate={
+                message.role === 'assistant' && index === messages.length - 1
+                  ? () => useChatStore.getState().regenerateLastMessage?.()
+                  : undefined
+              }
             />
           ))}
           <div id="scroll-anchor" className="h-1" />

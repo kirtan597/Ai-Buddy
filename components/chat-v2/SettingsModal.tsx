@@ -250,7 +250,7 @@ export function SettingsModal({ isOpen, onClose, onShowLogin }: SettingsModalPro
                                 <div className="text-center space-y-0.5">
                                     <p className="text-xs text-gray-400 dark:text-gray-500">AI Buddy v2.0</p>
                                     <p className="text-[10px] text-gray-300 dark:text-gray-600">
-                                        Powered by Gemini · Built with Next.js & MongoDB
+                                        Powered by OpenRouter (GPT-4o-mini) · Built with Next.js &amp; MongoDB
                                     </p>
                                 </div>
                             </div>

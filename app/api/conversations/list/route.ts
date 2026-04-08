@@ -23,11 +23,19 @@ export async function GET() {
             return new NextResponse('User not found', { status: 404 });
         }
 
+        // .lean() skips Mongoose document hydration — 2-5x faster for read-only lists
         const conversations = await Conversation.find({ userId: user._id })
             .sort({ updatedAt: -1 })
-            .limit(50); // Limit to recent 50 for performance
+            .limit(50)
+            .select('_id title createdAt updatedAt')   // only fields the sidebar needs
+            .lean();
 
-        return NextResponse.json(conversations);
+        return NextResponse.json(conversations, {
+          headers: {
+            // Serve stale instantly while revalidating in background (SWR pattern)
+            'Cache-Control': 'private, max-age=0, stale-while-revalidate=30',
+          },
+        });
     } catch (error) {
         console.error('[CONVERSATIONS_GET]', error);
         // Return empty array on DB failure to allow UI to load
