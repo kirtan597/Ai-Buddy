@@ -228,34 +228,48 @@ export async function POST(request: NextRequest) {
         await dbConnect();
         const user = await User.findOne({ email: session.user.email });
         if (user) {
-          // Find or create conversation
-          let conv = await Conversation.findOne({ _id: conversationId, userId: user._id });
-          if (!conv) {
-            try {
-              conv = await Conversation.create({
-                _id: conversationId,
-                userId: user._id,
-                title: userContent.slice(0, 60) || 'New Chat',
-              });
-            } catch (e) {
-              console.error('[chat-v2] Failed to create conversation:', e);
+          // Find or atomically create conversation to prevent E11000 race conditions
+          let conv = null;
+          try {
+            conv = await Conversation.findOneAndUpdate(
+              { _id: conversationId },
+              { 
+                $setOnInsert: { 
+                  userId: user._id, 
+                  title: userContent.slice(0, 60) || 'New Chat' 
+                } 
+              },
+              { upsert: true, new: true }
+            );
+          } catch (e: any) {
+            if (e.code === 11000) {
+              // Concurrency fallback
+              conv = await Conversation.findOne({ _id: conversationId });
+            } else {
+              console.error('[chat-v2] Failed to upsert conversation:', e);
             }
           }
 
-          // Fetch history (last 40 messages for better context)
-          try {
-            const history = await Message.find({ conversationId })
-              .sort({ createdAt: -1 })
-              .limit(40);
+          if (conv && conv.userId.toString() !== user._id.toString()) {
+            // Privacy protection: if session ID collided with another user's (e.g. guest logged in as different account)
+            console.error('[chat-v2] Notice: userId mismatch for conversation', conversationId);
+            conversationHistory = [];
+          } else if (conv) {
+            // Fetch history (last 40 messages for better context)
+            try {
+              const history = await Message.find({ conversationId })
+                .sort({ createdAt: -1 })
+                .limit(40);
 
-            const rawHistory = history.reverse().map(m => ({
-              role: m.role as 'user' | 'assistant' | 'system',
-              content: m.content,
-            }));
+              const rawHistory = history.reverse().map(m => ({
+                role: m.role as 'user' | 'assistant' | 'system',
+                content: m.content,
+              }));
 
-            conversationHistory = trimHistory(rawHistory);
-          } catch (e) {
-            console.error('[chat-v2] Failed to fetch history:', e);
+              conversationHistory = trimHistory(rawHistory);
+            } catch (e) {
+              console.error('[chat-v2] Failed to fetch history:', e);
+            }
           }
 
           // Save user message (fire-and-forget — don't block the stream)
