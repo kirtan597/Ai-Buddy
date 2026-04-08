@@ -59,8 +59,8 @@ export function MessageList() {
   const messageCount = messages?.length ?? 0;
   useEffect(() => {
     if (messageCount === 0) return;
-    // Only scroll if user hasn't scrolled up
-    if (shouldAutoScroll.current && !isUserScrollingRef.current) {
+    // Only scroll if we are actively sticking to the bottom
+    if (shouldAutoScroll.current) {
       scrollToBottom(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -83,7 +83,7 @@ export function MessageList() {
     function tick(time: number) {
       // Throttle: scroll at most every 100ms
       if (time - lastScroll > 100) {
-        if (shouldAutoScroll.current && !isUserScrollingRef.current) {
+        if (shouldAutoScroll.current) {
           scrollToBottom(true);
         }
         lastScroll = time;

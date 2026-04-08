@@ -60,37 +60,50 @@ export function useLenisScroll(options: LenisScrollOptions = {}) {
 
     lenisRef.current = lenis;
 
-    // Only run the rAF while Lenis is actually animating
     lenis.on('scroll', (e: any) => {
       const { scroll, limit } = e;
       const nearBottom = limit - scroll < threshold;
 
-      // Update refs (no re-render cost)
       isAtBottomRef.current = nearBottom;
-      shouldAutoScrollRef.current = nearBottom;
-      isUserScrollingRef.current = true;
-
-      // Batch: only one setState per leading edge of scroll burst
       setIsAtBottom(nearBottom);
 
-      if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
-      scrollTimeoutRef.current = setTimeout(() => {
-        isUserScrollingRef.current = false;
-      }, 1200);
+      // Programmatic scroll also fires this, so only re-engage autoScroll if we naturally hit bottom.
+      if (nearBottom) {
+        shouldAutoScrollRef.current = true;
+      }
     });
 
-    // Lenis emits 'scroll' on every frame, so we drive rAF ourselves.
-    // Start it now; we'll throttle it after any animation settles.
+    // ─── Native User Interaction Tracking ────────────────────────────────────
+    // If the user physically tries to scroll (wheel or touch), we break the auto-scroll lock.
+    const handleUserInteraction = (e: WheelEvent | TouchEvent) => {
+      // If it's a wheel event scrolling up, or just any touch/wheel interaction, 
+      // we temporarily lift the restriction to let them roam freely.
+      const isScrollUp = e instanceof WheelEvent ? e.deltaY < 0 : true; 
+      
+      if (isScrollUp || !isAtBottomRef.current) {
+        shouldAutoScrollRef.current = false;
+        
+        // Let Lenis stop the current tween immediately so user regains control
+        lenis.stop();
+        lenis.start(); 
+      }
+    };
+
+    const node = scrollRef.current;
+    node.addEventListener('wheel', handleUserInteraction, { passive: true });
+    node.addEventListener('touchmove', handleUserInteraction, { passive: true });
+
     startRaf();
 
     return () => {
       stopRaf();
+      node.removeEventListener('wheel', handleUserInteraction);
+      node.removeEventListener('touchmove', handleUserInteraction);
       lenis.destroy();
       lenisRef.current = null;
     };
-    // Only re-init when core options change (rare)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [duration]);
+  }, [duration, startRaf, threshold]);
 
   // ─── Scroll helpers ─────────────────────────────────────────────────────────
   const scrollToBottom = useCallback(
