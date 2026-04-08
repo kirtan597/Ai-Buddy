@@ -92,6 +92,23 @@ export function InputBar({ onShowLogin }: InputBarProps) {
     return () => window.removeEventListener('resize', check);
   }, []);
 
+  // ── Restore pending input after OAuth redirect ──────────────────────────────
+  useEffect(() => {
+    if (status === 'authenticated') {
+      const pendingInput = localStorage.getItem('ai_buddy_pending_prompt');
+      if (pendingInput) {
+        setInput(pendingInput);
+        localStorage.removeItem('ai_buddy_pending_prompt');
+        setTimeout(() => {
+          if (textareaRef.current) {
+            textareaRef.current.style.height = 'auto';
+            textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, isMobile ? 96 : 140) + 'px';
+          }
+        }, 50);
+      }
+    }
+  }, [status, isMobile]);
+
   // Revoke object URLs on unmount
   useEffect(() => {
     return () => { attachmentPreviews.forEach(url => URL.revokeObjectURL(url)); };
@@ -133,7 +150,13 @@ export function InputBar({ onShowLogin }: InputBarProps) {
     if (status === 'loading') return;
 
     if (status === 'authenticated' && guestMessageCount > 0) resetGuestMessageCount();
-    if (status === 'unauthenticated' && guestMessageCount >= 1) { onShowLogin?.(); return; }
+    if (status === 'unauthenticated' && guestMessageCount >= 1) { 
+      if (input.trim()) {
+        localStorage.setItem('ai_buddy_pending_prompt', input.trim());
+      }
+      onShowLogin?.(); 
+      return; 
+    }
 
     const messageContent     = input.trim();
     const messageAttachments = [...attachments];
