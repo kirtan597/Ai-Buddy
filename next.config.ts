@@ -17,12 +17,6 @@ const nextConfig: NextConfig = {
         '*.netlify.app',
       ],
     },
-    // Turbopack: deduplicate framer-motion to prevent double-bundling
-    turbo: {
-      resolveAlias: {
-        'framer-motion': 'framer-motion',
-      },
-    },
   },
 
   images: {

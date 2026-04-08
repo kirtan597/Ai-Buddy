@@ -77,11 +77,18 @@ function ChatInterfaceContent() {
       .then(res => (res.ok ? res.json() : Promise.reject()))
       .then((data: Record<string, unknown>[]) => {
         setSessions(
-          data.map(s => ({
-            ...(s as object),
-            id: (s._id || s.id) as string,
-            messages: [],
-          } as Parameters<typeof setSessions>[0][number]))
+          data.map(s => {
+            const anyS = s as any;
+            return {
+              ...anyS,
+              id: anyS._id || anyS.id,
+              messages: [],
+              title: anyS.title || 'New Chat',
+              createdAt: anyS.createdAt ? new Date(anyS.createdAt) : new Date(),
+              updatedAt: anyS.updatedAt ? new Date(anyS.updatedAt) : new Date(),
+              settings: anyS.settings || { model: 'openai/gpt-4o-mini', temperature: 0.7, maxTokens: 2000 },
+            } as import('@/types/chat-v2').ChatSession;
+          })
         );
       })
       .catch(err => console.error('[ChatInterface] Failed to load sessions:', err));
