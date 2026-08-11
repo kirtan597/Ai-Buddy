@@ -95,7 +95,7 @@ export async function POST(
         });
 
         // Update conversation updatedAt
-        await Conversation.findByIdAndUpdate(conversationId, { updatedAt: new Date() });
+        await Conversation.findOneAndUpdate({ _id: conversationId }, { updatedAt: new Date() });
 
         return NextResponse.json(newMessage);
     } catch (error) {

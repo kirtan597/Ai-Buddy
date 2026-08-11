@@ -66,8 +66,7 @@ export function MessageList() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messageCount]);
 
-  // ── Streaming auto-scroll: throttled via rAF ─────────────────────────────
-  // We don't subscribe to content — instead we run a periodic check while streaming
+  // ── Streaming auto-scroll: scroll whenever content grows ──────────────
   const streamingRafRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -76,18 +75,13 @@ export function MessageList() {
         cancelAnimationFrame(streamingRafRef.current);
         streamingRafRef.current = null;
       }
+      // Final snap to bottom when streaming ends
+      if (shouldAutoScroll.current) scrollToBottom(true);
       return;
     }
 
-    let lastScroll = 0;
-    function tick(time: number) {
-      // Throttle: scroll at most every 100ms
-      if (time - lastScroll > 100) {
-        if (shouldAutoScroll.current) {
-          scrollToBottom(true);
-        }
-        lastScroll = time;
-      }
+    function tick() {
+      if (shouldAutoScroll.current) scrollToBottom(false); // instant during stream
       streamingRafRef.current = requestAnimationFrame(tick);
     }
     streamingRafRef.current = requestAnimationFrame(tick);
@@ -141,10 +135,8 @@ export function MessageList() {
       {/* Lenis Scroll Container */}
       <div
         ref={scrollRef}
-        className="h-full overscroll-none"
+        className="h-full overflow-y-auto overscroll-none"
         style={{
-          overflow: 'hidden',
-          position: 'relative',
           WebkitOverflowScrolling: 'touch',
         }}
       >

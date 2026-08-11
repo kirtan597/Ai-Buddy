@@ -226,13 +226,21 @@ export function InputBar({ onShowLogin }: InputBarProps) {
       if (!reader) throw new Error('No response stream');
 
       addMessage({ role: 'assistant', content: '', isStreaming: true });
-      const currentMsgs = useChatStore.getState().currentSession?.messages || [];
-      const assistantMsgId = currentMsgs[currentMsgs.length - 1]?.id || '';
+      // Read ID after addMessage — Zustand set() is synchronous so state is settled
+      const assistantMsgId = useChatStore.getState().currentSession?.messages.at(-1)?.id ?? '';
+      if (!assistantMsgId) throw new Error('Failed to create assistant message');
 
       let accumulated = '';
-      let rafPending = false;
+      let rafId: number | null = null;
       const decoder = new TextDecoder();
-      const flush = () => { updateStreamingMessage(assistantMsgId, accumulated); rafPending = false; };
+      // Flush always uses the latest accumulated value via closure
+      const scheduleFlush = () => {
+        if (rafId !== null) return;
+        rafId = requestAnimationFrame(() => {
+          rafId = null;
+          updateStreamingMessage(assistantMsgId, accumulated);
+        });
+      };
 
       try {
         while (true) {
@@ -244,14 +252,16 @@ export function InputBar({ onShowLogin }: InputBarProps) {
             if (raw === '[DONE]' || raw.startsWith(':')) continue;
             try {
               const data = JSON.parse(raw);
-              if (data.content) {
-                accumulated += data.content;
-                if (!rafPending) { rafPending = true; requestAnimationFrame(flush); }
-              } else if (data.error) throw new Error(data.error);
+              if (data.content) { accumulated += data.content; scheduleFlush(); }
+              else if (data.error) throw new Error(data.error);
             } catch (e) { if (!(e instanceof SyntaxError)) throw e; }
           }
         }
-      } finally { reader.releaseLock(); }
+      } finally {
+        reader.releaseLock();
+        // Cancel any pending RAF and do a final synchronous flush
+        if (rafId !== null) { cancelAnimationFrame(rafId); rafId = null; }
+      }
 
       if (accumulated) updateStreamingMessage(assistantMsgId, accumulated);
       updateMessage(assistantMsgId, { isStreaming: false });

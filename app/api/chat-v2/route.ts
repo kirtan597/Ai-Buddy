@@ -276,7 +276,7 @@ export async function POST(request: NextRequest) {
           Message.create({ conversationId, role: 'user', content: userContent }).catch(e =>
             console.error('[chat-v2] Failed to save user message:', e)
           );
-          Conversation.findByIdAndUpdate(conversationId, { updatedAt: new Date() }).catch(() => {});
+          Conversation.findOneAndUpdate({ _id: conversationId }, { updatedAt: new Date() }).catch(() => {});
         }
       } catch (e) {
         console.error('[chat-v2] DB setup error (proceeding):', e);
@@ -290,12 +290,15 @@ export async function POST(request: NextRequest) {
       { role: 'user', content: userContent },
     ];
 
+    // ── Detect if this message likely needs media tools ─────────────────────
+    const mediaKeywords = /\b(generate|create|draw|make|produce|render|show me|give me).{0,30}(image|picture|photo|illustration|video|clip|animation)\b/i;
+    const needsTools = mediaKeywords.test(userContent);
+
     // ── Streaming response ────────────────────────────────────────────────────
     const stream = await openai.chat.completions.create({
-      model,  // from request — validated against allowlist above
+      model,
       messages,
-      tools,
-      tool_choice: 'auto',
+      ...(needsTools ? { tools, tool_choice: 'auto' } : {}),
       stream: true,
       temperature: 0.7,
       max_tokens: 4096,
@@ -397,7 +400,7 @@ export async function POST(request: NextRequest) {
             Message.create({ conversationId, role: 'assistant', content: fullResponseContent }).catch(e =>
               console.error('[chat-v2] Failed to save assistant message:', e)
             );
-            Conversation.findByIdAndUpdate(conversationId, { updatedAt: new Date() }).catch(() => {});
+            Conversation.findOneAndUpdate({ _id: conversationId }, { updatedAt: new Date() }).catch(() => {});
           }
 
           controller.enqueue(encoder.encode('data: [DONE]\n\n'));

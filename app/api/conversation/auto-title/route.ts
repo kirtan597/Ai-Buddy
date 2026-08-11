@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
 
     // Update in DB (fire-and-forget safe — if it fails the UI already shows the title)
     await dbConnect();
-    await Conversation.findByIdAndUpdate(conversationId, { title }).catch(() => {});
+    await Conversation.findOneAndUpdate({ _id: conversationId }, { title }).catch(() => {});
 
     return NextResponse.json({ title });
   } catch (err) {

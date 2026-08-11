@@ -33,7 +33,7 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
                         className="relative w-full max-w-md bg-white dark:bg-gray-900 rounded-2xl shadow-2xl overflow-hidden border border-violet-100 dark:border-gray-800"
                     >
                         {/* Decorative Header */}
-                        <div className="h-32 bg-gradient-to-br from-violet-600 to-indigo-600 relative overflow-hidden flex items-center justify-center">
+                        <div className="h-32 bg-linear-to-br from-violet-600 to-indigo-600 relative overflow-hidden flex items-center justify-center">
                             <div 
                                 className="absolute inset-0 opacity-20" 
                                 style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`, backgroundSize: '200px' }} 
